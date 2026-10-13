@@ -100,7 +100,7 @@
       const input = document.getElementById("notesInput").value;
       if (!input.trim()) return;
 
-      const lines = input.split('.').filter(l => l.trim().length > 0);
+      const lines = input.split(/[\n,.]+/).filter(l => l.trim().length > 0);
       const items = [];
       let subtotal = 0;
 
