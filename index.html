@@ -139,30 +139,71 @@
         subtotal = 250;
       }
 
-      const contingency = Math.round(subtotal * 0.10);
-      const tax = Math.round(subtotal * 0.08);
-
       currentEstimate = {
         project_title: "Field Site Estimate",
         client_name: "Residential Client",
         client_address: "On-site Walkthrough",
         line_items: items,
-        summary: { subtotal, estimated_contingency: contingency, tax, grand_total: subtotal + contingency + tax }
+        summary: { subtotal, estimated_contingency: 0, tax: 0, grand_total: subtotal }
       };
+
+      renderEstimateUI();
+    }
+
+    // New helper to render and support live editing
+    function renderEstimateUI() {
+      if (!currentEstimate) return;
+
+      // Recalculate totals based on current items
+      let subtotal = 0;
+      currentEstimate.line_items.forEach(item => {
+        subtotal += Number(item.total_cost) || 0;
+      });
+      const contingency = Math.round(subtotal * 0.10);
+      const tax = Math.round(subtotal * 0.08);
+      const grand_total = subtotal + contingency + tax;
+
+      currentEstimate.summary = { subtotal, estimated_contingency: contingency, tax, grand_total };
 
       document.getElementById("outputWrapper").classList.remove("hidden");
       const container = document.getElementById("outputContainer");
 
       let html = `<h3 class="font-bold text-amber-400 border-b border-slate-900 pb-2 mb-2">${currentEstimate.project_title}</h3>`;
-      currentEstimate.line_items.forEach(item => {
-        html += `<div class="flex justify-between border-b border-slate-900/50 pb-1 mb-1">
-          <div><span class="text-amber-500 font-mono">[${item.category}]</span> <span class="text-slate-300">${item.description}</span></div>
-          <span class="font-bold text-slate-200">$${item.total_cost}</span>
+      
+      currentEstimate.line_items.forEach((item, index) => {
+        html += `<div class="flex items-center justify-between border-b border-slate-900/50 pb-2 mb-2 gap-2">
+          <div class="flex-1">
+            <span class="text-amber-500 font-mono text-[10px] block">[${item.category}]</span> 
+            <input type="text" value="${item.description}" onchange="updateItemDesc(${index}, this.value)" class="w-full bg-slate-900 text-slate-200 border border-slate-800 rounded px-1.5 py-0.5 text-xs mt-0.5 focus:outline-none focus:border-amber-500">
+          </div>
+          <div class="w-24 text-right">
+            <span class="text-[10px] text-slate-500 block">Total ($)</span>
+            <input type="number" value="${item.total_cost}" onchange="updateItemCost(${index}, this.value)" class="w-full bg-slate-900 text-emerald-400 font-bold border border-slate-800 rounded px-1.5 py-0.5 text-xs text-right focus:outline-none focus:border-amber-500">
+          </div>
         </div>`;
       });
-      html += `<div class="pt-2 font-bold text-slate-100 flex justify-between border-t border-slate-800 mt-2"><span>Grand Total:</span><span class="text-amber-400">$${currentEstimate.summary.grand_total}</span></div>`;
+
+      html += `<div class="pt-2 text-xs space-y-1 border-t border-slate-800 mt-3 text-slate-400">
+        <div class="flex justify-between"><span>Subtotal:</span><span>$${subtotal}</span></div>
+        <div class="flex justify-between"><span>Contingency (10%):</span><span>$${contingency}</span></div>
+        <div class="flex justify-between"><span>Est. Tax (8%):</span><span>$${tax}</span></div>
+        <div class="flex justify-between font-bold text-slate-100 pt-1 border-t border-slate-900 text-sm">
+          <span>Grand Total:</span>
+          <span class="text-amber-400">$${grand_total}</span>
+        </div>
+      </div>`;
 
       container.innerHTML = html;
+    }
+
+    // Functions to update live data when fields are edited
+    function updateItemCost(index, newCost) {
+      currentEstimate.line_items[index].total_cost = parseFloat(newCost) || 0;
+      renderEstimateUI(); // Re-renders and updates totals instantly
+    }
+
+    function updateItemDesc(index, newDesc) {
+      currentEstimate.line_items[index].description = newDesc;
     }
 
     async function saveToSupabase() {
