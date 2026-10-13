@@ -100,22 +100,25 @@
       const input = document.getElementById("notesInput").value;
       if (!input.trim()) return;
 
-      const lines = input.split(/[\n,.]+/).filter(l => l.trim().length > 0);
+      // Safe split: handles periods, commas, or line breaks without breaking
+      const rawLines = input.split(/[\n,.]+/);
       const items = [];
       let subtotal = 0;
 
-      lines.forEach((line) => {
+      rawLines.forEach((line) => {
+        const text = line.trim().toLowerCase();
+        if (text.length === 0) return;
+
         let category = "General";
         let cost = 150;
         let unit = "flat_rate";
         let qty = 1;
 
-        const text = line.toLowerCase();
         if (text.includes("demo") || text.includes("demolish") || text.includes("remove")) {
           category = "Demolition"; cost = 85; unit = "hours"; qty = 8;
-        } else if (text.includes("tile") || text.includes("sq ft")) {
+        } else if (text.includes("tile") || text.includes("floor") || text.includes("sq ft")) {
           category = "Finish Work"; cost = 14; unit = "sq_ft"; qty = 50;
-        } else if (text.includes("plumb") || text.includes("vanity") || text.includes("pipe")) {
+        } else if (text.includes("plumb") || text.includes("vanity") || text.includes("pipe") || text.includes("sink")) {
           category = "Plumbing"; cost = 450; unit = "units"; qty = 1;
         }
 
@@ -123,6 +126,12 @@
         subtotal += total;
         items.push({ category, description: line.trim(), quantity: qty, unit, unit_cost: cost, total_cost: total });
       });
+
+      // Fallback if no specific keywords matched
+      if (items.length === 0) {
+        items.push({ category: "General", description: input.trim(), quantity: 1, unit: "flat_rate", unit_cost: 250, total_cost: 250 });
+        subtotal = 250;
+      }
 
       const contingency = Math.round(subtotal * 0.10);
       const tax = Math.round(subtotal * 0.08);
