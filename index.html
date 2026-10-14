@@ -51,7 +51,10 @@
       border-color: #f59e0b;
     }
 
-    canvas { touch-action: none; }
+    canvas { 
+      touch-action: none; 
+      cursor: crosshair;
+    }
   </style>
 </head>
 <body class="min-h-screen flex flex-col justify-between">
@@ -191,9 +194,9 @@
             <span id="lblSigTitle" class="text-xs font-bold text-slate-300">Client Signature Approval</span>
             <button id="lblClearSig" onclick="clearSignature()" class="text-xs text-rose-400 underline font-semibold">Clear</button>
           </div>
-          <div class="border border-slate-800 rounded-xl bg-white overflow-hidden touch-none relative">
-            <canvas id="sigCanvas" class="w-full h-28 block"></canvas>
-            <div id="sigPlaceholder" class="absolute inset-0 flex items-center justify-center pointer-events-none text-slate-400 text-xs italic">
+          <div class="border border-slate-700 rounded-xl bg-white overflow-hidden relative" style="height: 120px;">
+            <canvas id="sigCanvas" class="w-full h-full block cursor-crosshair"></canvas>
+            <div id="sigPlaceholder" class="absolute inset-0 flex items-center justify-center pointer-events-none text-slate-400 text-xs italic select-none">
               Sign here with finger or stylus
             </div>
           </div>
@@ -391,6 +394,94 @@
     let latLngPoints = [];
     let markerLayers = [];
     let rawSquareMeters = 0;
+
+    // Signature Pad Variables
+    let canvas, ctx, isDrawing = false, hasSigned = false;
+
+    function initSignaturePad() {
+      canvas = document.getElementById('sigCanvas');
+      if (!canvas) return;
+      ctx = canvas.getContext('2d');
+      resizeCanvas();
+      window.addEventListener('resize', resizeCanvas);
+
+      canvas.addEventListener('mousedown', startDrawing);
+      canvas.addEventListener('mousemove', draw);
+      window.addEventListener('mouseup', stopDrawing);
+
+      canvas.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        const touch = e.touches[0];
+        startDrawing(touch);
+      }, { passive: false });
+
+      canvas.addEventListener('touchmove', (e) => {
+        e.preventDefault();
+        const touch = e.touches[0];
+        draw(touch);
+      }, { passive: false });
+
+      canvas.addEventListener('touchend', stopDrawing);
+    }
+
+    function resizeCanvas() {
+      if (!canvas || !canvas.parentElement) return;
+      const rect = canvas.parentElement.getBoundingClientRect();
+      const tempImg = hasSigned ? canvas.toDataURL() : null;
+
+      canvas.width = rect.width || 300;
+      canvas.height = rect.height || 120;
+
+      ctx.strokeStyle = '#0f172a';
+      ctx.lineWidth = 3.0;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+
+      if (tempImg) {
+        const img = new Image();
+        img.onload = () => ctx.drawImage(img, 0, 0);
+        img.src = tempImg;
+      }
+    }
+
+    function getCanvasCoordinates(e) {
+      const rect = canvas.getBoundingClientRect();
+      return {
+        x: (e.clientX - rect.left) * (canvas.width / rect.width),
+        y: (e.clientY - rect.top) * (canvas.height / rect.height)
+      };
+    }
+
+    function startDrawing(e) {
+      isDrawing = true;
+      hasSigned = true;
+      document.getElementById('sigPlaceholder')?.classList.add('hidden');
+      const pos = getCanvasCoordinates(e);
+      ctx.beginPath();
+      ctx.moveTo(pos.x, pos.y);
+    }
+
+    function draw(e) {
+      if (!isDrawing) return;
+      const pos = getCanvasCoordinates(e);
+      ctx.lineTo(pos.x, pos.y);
+      ctx.stroke();
+    }
+
+    function stopDrawing() {
+      if (isDrawing) {
+        isDrawing = false;
+        if (currentEstimate) renderEstimateUI();
+      }
+    }
+
+    function clearSignature() {
+      if (!ctx || !canvas) return;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      hasSigned = false;
+      document.getElementById('sigPlaceholder')?.classList.remove('hidden');
+      if (currentEstimate) renderEstimateUI();
+    }
 
     window.addEventListener('DOMContentLoaded', () => {
       initSignaturePad();
@@ -722,7 +813,8 @@
             <p class="text-[11px] text-slate-400 mt-0.5">Client: <strong class="text-slate-200">${currentEstimate.client_name}</strong></p>
           </div>
           <div class="text-right shrink-0">
-            <span class="text-[10px] text-amber-400 font-bold block">${currentEstimate.created_date} &bull; ${currentEstimate.created_time}</span>
+            <span class="text-[10px] text-amber-400 font-bold block">${currentEstimate.created_date}</span>
+            <span class="text-[9px] text-slate-400 block">${currentEstimate.created_time}</span>
           </div>
         </div>
       `;
@@ -812,7 +904,6 @@
 
       let localHistory = JSON.parse(localStorage.getItem('jobsight_estimates') || '[]');
       
-      // Check if updating existing record or adding new
       const existingIndex = localHistory.findIndex(e => e.order_number === currentEstimate.order_number);
       if (existingIndex >= 0) {
         localHistory[existingIndex] = record;
@@ -843,7 +934,7 @@
                 <span class="bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[9px] px-1 py-0.5 rounded font-mono">${est.order_number || '#JS-0000'}</span>
               </div>
               <p class="text-[10px] text-slate-400 mt-0.5">${est.client_address}</p>
-              <p class="text-[9px] text-amber-500/80 mt-0.5">${est.created_date} &bull; ${est.created_time}</p>
+              <p class="text-[9px] text-amber-500/80 mt-0.5">${est.created_date || ''} ${est.created_time ? '&bull; ' + est.created_time : ''}</p>
             </div>
             <div class="text-right shrink-0 flex items-center space-x-2">
               <span class="font-extrabold text-emerald-400 text-xs">$${est.summary?.grand_total || 0}</span>
@@ -895,7 +986,6 @@
 
       let y = 40;
       
-      // Include custom logo in PDF if available
       if (customLogoBase64) {
         try {
           doc.addImage(customLogoBase64, 'PNG', 40, y - 5, 35, 35);
@@ -974,8 +1064,10 @@
       doc.text("Payment due upon completion. Valid for 30 days.", 40, y + 12);
 
       if (canvas && hasSigned) {
-        const sigData = canvas.toDataURL("image/png");
-        doc.addImage(sigData, 'PNG', 400, y - 10, 140, 45);
+        try {
+          const sigData = canvas.toDataURL("image/png");
+          doc.addImage(sigData, 'PNG', 400, y - 10, 140, 45);
+        } catch (e) {}
       }
 
       doc.setFont("Helvetica", "bold");
