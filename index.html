@@ -11,6 +11,8 @@
 
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- Robust jsPDF UMD Build -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
   <!-- Leaflet CSS & JS for Free Open-Source Satellite Maps -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -244,7 +246,7 @@
 
         <!-- Action Buttons -->
         <div class="grid grid-cols-1 gap-2.5 pt-1">
-          <button id="btnPdf" onclick="downloadPDF()" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-3 rounded-xl text-xs uppercase tracking-wider">📄 Export & Print PDF</button>
+          <button id="btnPdf" onclick="downloadPDF()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold py-3 rounded-xl text-xs">📄 Export Direct PDF</button>
           <div class="grid grid-cols-2 gap-2">
             <button id="btnShare" onclick="shareProposal()" class="bg-sky-600 hover:bg-sky-500 text-white font-bold py-3 rounded-xl text-xs">📤 Share</button>
             <button id="btnSave" onclick="saveEstimate()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl text-xs">💾 Save Local</button>
@@ -1079,115 +1081,123 @@
       fetchHistory();
     }
 
-    // 100% Reliable Native Browser Print-to-PDF Engine
     function downloadPDF() {
       if (!currentEstimate) return;
-
-      // Create a clean printable window layout
-      const printWindow = window.open('', '_blank');
-      if (!printWindow) {
-        alert("Popup blocked! Please allow popups to export PDF.");
+      
+      // Ensure jsPDF is loaded correctly
+      const { jsPDF } = window.jspdf || window.jsPDF;
+      if (!jsPDF) {
+        alert("PDF generator library is loading. Please try again in 2 seconds.");
         return;
       }
 
-      let itemsHtml = '';
+      const doc = new jsPDF({ unit: 'pt', format: 'letter' });
+
+      let y = 40;
+      
+      if (customLogoBase64) {
+        try {
+          doc.addImage(customLogoBase64, 'PNG', 40, y - 5, 35, 35);
+          doc.setFont("Helvetica", "bold");
+          doc.setFontSize(18);
+          doc.text(currentEstimate.company_name, 85, y + 18);
+        } catch (e) {
+          doc.setFont("Helvetica", "bold");
+          doc.setFontSize(18);
+          doc.text(currentEstimate.company_name, 40, y);
+        }
+      } else {
+        doc.setFont("Helvetica", "bold");
+        doc.setFontSize(18);
+        doc.text(currentEstimate.company_name, 40, y);
+      }
+
+      doc.setFontSize(10);
+      doc.setFont("Helvetica", "normal");
+      doc.text(`Order: ${currentEstimate.order_number}`, 40, y + 32);
+      doc.text(`Date & Time: ${currentEstimate.created_date} at ${currentEstimate.created_time}`, 40, y + 45);
+
+      doc.setFont("Helvetica", "bold");
+      doc.text(`Client: ${currentEstimate.client_name}`, 400, y);
+      doc.setFont("Helvetica", "normal");
+      doc.text(currentEstimate.client_address, 400, y + 15);
+
+      y += 65;
+      doc.setLineWidth(1);
+      doc.line(40, y, 572, y);
+
+      y += 20;
+      doc.setFont("Helvetica", "bold");
+      doc.setFontSize(12);
+      doc.text("ITEMIZED ESTIMATE & PAYMENT", 40, y);
+
+      y += 15;
+      doc.setFillColor(241, 245, 249);
+      doc.rect(40, y, 532, 22, "F");
+      doc.text("Description", 48, y + 15);
+      doc.text("Total", 500, y + 15);
+
+      y += 25;
+      doc.setFont("Helvetica", "normal");
+      doc.setFontSize(10);
+
       currentEstimate.line_items.forEach(item => {
-        itemsHtml += `
-          <tr>
-            <td style="padding: 8px; border-bottom: 1px solid #ddd;">[${item.category}] ${item.description}</td>
-            <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: right;">$${item.total_cost}</td>
-          </tr>
-        `;
+        doc.text(`[${item.category}] ${item.description}`, 48, y);
+        doc.text(`$${item.total_cost}`, 500, y);
+        y += 20;
+        doc.setLineWidth(0.5);
+        doc.setStrokeColor(226, 232, 240);
+        doc.line(40, y - 5, 572, y - 5);
       });
 
       if (currentEstimate.extra_cost > 0) {
-        itemsHtml += `
-          <tr>
-            <td style="padding: 8px; border-bottom: 1px solid #ddd;">[Extra / Unforeseen] ${currentEstimate.extra_desc}</td>
-            <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: right;">$${currentEstimate.extra_cost}</td>
-          </tr>
-        `;
+        doc.text(`[Extra / Unforeseen] ${currentEstimate.extra_desc}`, 48, y);
+        doc.text(`$${currentEstimate.extra_cost}`, 500, y);
+        y += 20;
       }
 
-      const sigImg = (canvas && hasSigned) ? `<img src="${canvas.toDataURL()}" style="height: 50px;">` : `<div style="height: 40px; border-bottom: 1px solid #000;"></div>`;
-      const logoImg = customLogoBase64 ? `<img src="${customLogoBase64}" style="width: 40px; height: 40px; object-fit: cover; border-radius: 8px; vertical-align: middle; margin-right: 10px;">` : '';
+      y += 10;
+      let subtotal = currentEstimate.summary.subtotal || 0;
+      let tax = currentEstimate.summary.tax || 0;
+      let grandTotal = currentEstimate.summary.grand_total || 0;
+      let amountPaid = currentEstimate.amount_paid || 0;
+      let remainingBalance = currentEstimate.summary.remaining_balance || 0;
 
-      const htmlContent = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <title>Estimate ${currentEstimate.order_number}</title>
-          <style>
-            body { font-family: Helvetica, Arial, sans-serif; color: #111; padding: 30px; font-size: 14px; }
-            .header { display: flex; justify-content: space-between; border-bottom: 2px solid #333; padding-bottom: 15px; margin-bottom: 20px; }
-            table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-            th { background: #f1f5f9; text-align: left; padding: 8px; }
-            .totals { width: 300px; margin-left: auto; margin-bottom: 30px; }
-            .totals div { display: flex; justify-content: space-between; padding: 4px 0; }
-            .signatures { display: flex; justify-content: space-between; margin-top: 50px; }
-            .sig-box { width: 200px; text-align: center; }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <div>
-              <h2>${logoImg} ${currentEstimate.company_name}</h2>
-              <p>Order: <strong>${currentEstimate.order_number}</strong><br>Date: ${currentEstimate.created_date} at ${currentEstimate.created_time}</p>
-            </div>
-            <div style="text-align: right;">
-              <p><strong>Client:</strong> ${currentEstimate.client_name}<br>${currentEstimate.client_address}</p>
-            </div>
-          </div>
+      doc.text(`Subtotal: $${subtotal.toFixed(2)}`, 420, y); y += 16;
+      doc.text(`Est. Tax (8.25%): $${tax.toFixed(2)}`, 420, y); y += 20;
 
-          <h3>Itemized Estimate & Payment</h3>
-          <table>
-            <thead>
-              <tr>
-                <th>Description</th>
-                <th style="text-align: right;">Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${itemsHtml}
-            </tbody>
-          </table>
+      doc.setFont("Helvetica", "bold");
+      doc.setFontSize(12);
+      doc.text(`Grand Total: $${grandTotal.toFixed(2)}`, 360, y);
+      y += 18;
 
-          <div class="totals">
-            <div><span>Subtotal:</span> <span>$${currentEstimate.summary.subtotal.toFixed(2)}</span></div>
-            <div><span>Est. Tax (8.25%):</span> <span>$${currentEstimate.summary.tax.toFixed(2)}</span></div>
-            <div style="font-weight: bold; font-size: 16px; border-top: 1px solid #333; padding-top: 5px;">
-              <span>Grand Total:</span> <span>$${currentEstimate.summary.grand_total.toFixed(2)}</span>
-            </div>
-            <div style="color: #059669;"><span>Paid (${currentEstimate.payment_method}):</span> <span>-$${currentEstimate.amount_paid.toFixed(2)}</span></div>
-            <div style="font-weight: bold; color: #dc2626; border-top: 1px solid #333; padding-top: 5px;">
-              <span>Remaining Balance Due:</span> <span>$${currentEstimate.summary.remaining_balance.toFixed(2)}</span>
-            </div>
-          </div>
+      doc.setFontSize(10);
+      doc.text(`Paid (${currentEstimate.payment_method}): -$${amountPaid.toFixed(2)}`, 380, y); y += 16;
+      doc.text(`Remaining Balance Due: $${remainingBalance.toFixed(2)}`, 340, y);
 
-          <p><strong>Terms & Conditions:</strong><br>Payment due upon completion. Valid for 30 days.</p>
+      y += 35;
+      doc.setFont("Helvetica", "bold");
+      doc.setFontSize(10);
+      doc.text("Terms & Conditions:", 40, y);
+      doc.setFont("Helvetica", "normal");
+      doc.setFontSize(8);
+      doc.text("Payment due upon completion. Valid for 30 days.", 40, y + 12);
 
-          <div class="signatures">
-            <div class="sig-box">
-              <div style="height: 40px; border-bottom: 1px solid #000;"></div>
-              <p style="font-size: 12px; margin-top: 5px;">Contractor Signature</p>
-            </div>
-            <div class="sig-box">
-              ${sigImg}
-              <p style="font-size: 12px; margin-top: 5px;">Client Approval Signature</p>
-            </div>
-          </div>
+      if (canvas && hasSigned) {
+        try {
+          const sigData = canvas.toDataURL("image/png");
+          doc.addImage(sigData, 'PNG', 400, y - 10, 140, 45);
+        } catch (e) {}
+      }
 
-          <script>
-            window.onload = function() {
-              window.print();
-            };
-          </script>
-        </body>
-        </html>
-      `;
+      doc.setFont("Helvetica", "bold");
+      doc.text("Contractor Signature", 40, y + 55);
+      doc.line(40, y + 45, 180, y + 45);
 
-      printWindow.document.write(htmlContent);
-      printWindow.document.close();
+      doc.text("Client Approval Signature", 400, y + 55);
+      doc.line(400, y + 45, 540, y + 45);
+
+      doc.save(`JobSight_${currentEstimate.order_number}.pdf`);
     }
 
     function shareProposal() {
