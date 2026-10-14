@@ -2,16 +2,16 @@
 <html lang="en" class="h-full bg-slate-950 text-slate-100 antialiased selection:bg-amber-500 selection:text-slate-950">
 <head>
   <meta charset="UTF-8">
+  <!-- Dynamic viewport scaling for mobile phones & tablets -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>JobSight AI - Universal Field OS</title>
+  <title>JobSight AI - Field OS</title>
   
-  <!-- Mobile & PWA Tags -->
+  <!-- Progressive Web App (PWA) Tags -->
   <link rel="manifest" href="manifest.json">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="theme-color" content="#020617">
 
-  <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -19,14 +19,13 @@
         extend: {
           colors: {
             brand: {
-              50: '#fffbebee',
               400: '#fbbf24',
               500: '#f59e0b',
               600: '#d97706',
             }
           },
           screens: {
-            'xs': '420px',
+            'xs': '380px',
           }
         }
       }
@@ -39,58 +38,51 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
   <style>
-    /* Smooth touch interactions & prevent unwanted scaling on inputs */
+    /* Prevents auto-zoom on iOS inputs while scaling nicely on desktop */
     input, select, textarea, button {
-      font-size: 16px !important; /* Prevents auto-zoom on iOS */
+      font-size: 16px !important;
       -webkit-tap-highlight-color: transparent;
     }
     @media (min-width: 640px) {
       input, select, textarea, button {
-        font-size: 0.875rem !important; /* 14px on sm+ screens */
+        font-size: 0.875rem !important; /* 14px on sm+ desktop screens */
       }
     }
-    /* Hide scrollbars for clean UI while keeping scrollability */
-    .no-scrollbar::-webkit-scrollbar { display: none; }
-    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-    
-    /* Custom Canvas Touch Action */
     canvas { touch-action: none; }
   </style>
 </head>
 <body class="min-h-full bg-slate-950 text-slate-100 font-sans flex flex-col justify-between pt-safe pb-safe pl-safe pr-safe">
 
-  <!-- Responsive Top Navbar -->
-  <header class="sticky top-0 z-40 bg-slate-950/80 backdrop-blur-md border-b border-slate-800/80 px-4 py-3 sm:px-6">
-    <div class="max-w-5xl mx-auto flex items-center justify-between gap-3">
+  <!-- Responsive Navigation Header -->
+  <header class="sticky top-0 z-40 bg-slate-950/90 backdrop-blur-md border-b border-slate-800/80 px-3 py-2.5 sm:px-6 sm:py-3">
+    <div class="max-w-5xl mx-auto flex items-center justify-between gap-2 sm:gap-4">
       
       <!-- Brand Logo & Title -->
-      <div class="flex items-center space-x-2.5 min-w-0">
-        <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center shrink-0 shadow-inner">
-          <span class="text-lg sm:text-xl">🛠️</span>
+      <div class="flex items-center space-x-2 min-w-0">
+        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center shrink-0 shadow-inner">
+          <span class="text-base sm:text-xl">🛠️</span>
         </div>
         <div class="truncate">
-          <div class="flex items-center space-x-2">
-            <h1 class="text-base sm:text-lg font-bold tracking-tight text-amber-500 leading-tight truncate">JobSight AI</h1>
-            <span class="hidden xs:inline-block bg-slate-800 border border-slate-700 text-slate-400 text-[10px] font-mono font-medium px-1.5 py-0.5 rounded">v2.5</span>
+          <div class="flex items-center space-x-1.5 sm:space-x-2">
+            <h1 class="text-sm sm:text-lg font-bold tracking-tight text-amber-500 leading-tight truncate">JobSight AI</h1>
+            <span class="hidden xs:inline-block bg-slate-800 border border-slate-700 text-slate-400 text-[9px] sm:text-[10px] font-mono font-medium px-1.5 py-0.5 rounded">v2.5</span>
           </div>
-          <p id="subHeader" class="text-[11px] sm:text-xs text-slate-400 truncate">Universal Field Operations & Estimate Engine</p>
+          <p id="subHeader" class="text-[10px] sm:text-xs text-slate-400 truncate">Universal Field Operations & Estimate Engine</p>
         </div>
       </div>
 
-      <!-- Controls: Language Toggle & Navigation Tabs -->
-      <div class="flex items-center space-x-2 shrink-0">
-        <!-- Responsive Language Switcher -->
-        <select id="langSelect" onchange="switchLanguage(this.value)" class="bg-slate-900 border border-slate-800 text-amber-400 text-xs font-semibold px-2 py-1.5 rounded-lg focus:outline-none focus:border-amber-500 cursor-pointer shadow-sm">
+      <!-- Language & Tab Switches -->
+      <div class="flex items-center space-x-1.5 sm:space-x-2 shrink-0">
+        <select id="langSelect" onchange="switchLanguage(this.value)" class="bg-slate-900 border border-slate-800 text-amber-400 text-xs font-semibold px-1.5 sm:px-2 py-1.5 rounded-lg focus:outline-none focus:border-amber-500 cursor-pointer shadow-sm">
           <option value="en">🇺🇸 EN</option>
           <option value="es">🇪🇸 ES</option>
         </select>
 
-        <!-- Navigation Tabs -->
         <nav class="flex bg-slate-900 p-1 rounded-xl border border-slate-800/80 shadow-inner">
-          <button onclick="switchTab('generator')" id="tabGenBtn" class="bg-amber-500 text-slate-950 text-xs font-bold px-3 py-1.5 rounded-lg transition-all shadow">
+          <button onclick="switchTab('generator')" id="tabGenBtn" class="bg-amber-500 text-slate-950 text-xs font-bold px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg transition-all shadow">
             Generator
           </button>
-          <button onclick="switchTab('history')" id="tabHistBtn" class="text-slate-400 hover:text-slate-200 text-xs font-semibold px-3 py-1.5 rounded-lg transition-all">
+          <button onclick="switchTab('history')" id="tabHistBtn" class="text-slate-400 hover:text-slate-200 text-xs font-semibold px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg transition-all">
             History
           </button>
         </nav>
@@ -99,42 +91,41 @@
     </div>
   </header>
 
-  <!-- Main Responsive Layout Wrapper -->
-  <main class="flex-1 max-w-5xl w-full mx-auto p-3 xs:p-4 sm:p-6 space-y-6">
+  <!-- Responsive Main Container (Single-column mobile, multi-column desktop) -->
+  <main class="flex-1 max-w-5xl w-full mx-auto p-3 xs:p-4 sm:p-6 space-y-5 sm:space-y-6">
 
     <!-- TAB 1: GENERATOR TAB -->
-    <div id="generatorTab" class="space-y-6">
+    <div id="generatorTab" class="space-y-5 sm:space-y-6">
       
-      <!-- Responsive Dual-Card Row on Desktop / Stacked on Mobile -->
-      <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6">
         
-        <!-- PANEL 1: Contractor Branding & Client Details -->
-        <div class="lg:col-span-5 bg-slate-900/90 p-4 sm:p-5 rounded-2xl border border-slate-800/80 shadow-xl space-y-4">
-          <div class="flex items-center space-x-2 border-b border-slate-800/60 pb-3">
+        <!-- PANEL 1: Contractor & Client Details -->
+        <div class="lg:col-span-5 bg-slate-900/90 p-3.5 xs:p-4 sm:p-5 rounded-2xl border border-slate-800/80 shadow-xl space-y-3.5 sm:space-y-4">
+          <div class="flex items-center space-x-2 border-b border-slate-800/60 pb-2.5 sm:pb-3">
             <span class="text-amber-500 font-mono text-xs font-bold">01.</span>
-            <h2 id="lblDetailsTitle" class="text-sm font-bold tracking-wide text-amber-400 uppercase">Proposal Details</h2>
+            <h2 id="lblDetailsTitle" class="text-xs sm:text-sm font-bold tracking-wide text-amber-400 uppercase">Proposal Details</h2>
           </div>
 
           <div class="space-y-3">
             <div>
-              <label id="lblCompany" class="text-xs text-slate-400 font-medium block mb-1">Contractor / Company Name</label>
-              <input type="text" id="companyNameInput" value="ProBuild Services" class="w-full bg-slate-950/80 border border-slate-800 rounded-xl p-2.5 text-xs sm:text-sm text-slate-200 focus:outline-none focus:border-amber-500 transition">
+              <label id="lblCompany" class="text-[11px] sm:text-xs text-slate-400 font-medium block mb-1">Contractor / Company Name</label>
+              <input type="text" id="companyNameInput" value="ProBuild Services" class="w-full bg-slate-950/80 border border-slate-800 rounded-xl p-2 sm:p-2.5 text-xs sm:text-sm text-slate-200 focus:outline-none focus:border-amber-500 transition">
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-3">
               <div>
-                <label id="lblClient" class="text-xs text-slate-400 font-medium block mb-1">Client Name</label>
-                <input type="text" id="clientNameInput" value="John Smith" class="w-full bg-slate-950/80 border border-slate-800 rounded-xl p-2.5 text-xs sm:text-sm text-slate-200 focus:outline-none focus:border-amber-500 transition">
+                <label id="lblClient" class="text-[11px] sm:text-xs text-slate-400 font-medium block mb-1">Client Name</label>
+                <input type="text" id="clientNameInput" value="John Smith" class="w-full bg-slate-950/80 border border-slate-800 rounded-xl p-2 sm:p-2.5 text-xs sm:text-sm text-slate-200 focus:outline-none focus:border-amber-500 transition">
               </div>
               <div>
-                <label id="lblAddress" class="text-xs text-slate-400 font-medium block mb-1">Property / Job Address</label>
-                <input type="text" id="clientAddressInput" value="123 Maple Street, Austin TX" class="w-full bg-slate-950/80 border border-slate-800 rounded-xl p-2.5 text-xs sm:text-sm text-slate-200 focus:outline-none focus:border-amber-500 transition">
+                <label id="lblAddress" class="text-[11px] sm:text-xs text-slate-400 font-medium block mb-1">Property / Job Address</label>
+                <input type="text" id="clientAddressInput" value="123 Maple Street, Austin TX" class="w-full bg-slate-950/80 border border-slate-800 rounded-xl p-2 sm:p-2.5 text-xs sm:text-sm text-slate-200 focus:outline-none focus:border-amber-500 transition">
               </div>
             </div>
 
             <div>
-              <label id="lblArea" class="text-xs text-slate-400 font-medium block mb-1">Job Area / Room Focus</label>
-              <select id="roomCategorySelect" class="w-full bg-slate-950/80 border border-slate-800 rounded-xl p-2.5 text-xs sm:text-sm text-amber-400 font-semibold focus:outline-none focus:border-amber-500 transition cursor-pointer">
+              <label id="lblArea" class="text-[11px] sm:text-xs text-slate-400 font-medium block mb-1">Job Area / Room Focus</label>
+              <select id="roomCategorySelect" class="w-full bg-slate-950/80 border border-slate-800 rounded-xl p-2 sm:p-2.5 text-xs sm:text-sm text-amber-400 font-semibold focus:outline-none focus:border-amber-500 transition cursor-pointer">
                 <option value="General & Whole House">General / Whole House</option>
                 <option value="Kitchen Remodel">Kitchen / Cocina</option>
                 <option value="Master Bathroom">Bathroom / Baño</option>
@@ -145,24 +136,23 @@
           </div>
         </div>
 
-        <!-- PANEL 2: Walkthrough Notes & Inputs -->
-        <div class="lg:col-span-7 bg-slate-900/90 p-4 sm:p-5 rounded-2xl border border-slate-800/80 shadow-xl space-y-4 flex flex-col justify-between">
+        <!-- PANEL 2: Walkthrough Notes & Tools -->
+        <div class="lg:col-span-7 bg-slate-900/90 p-3.5 xs:p-4 sm:p-5 rounded-2xl border border-slate-800/80 shadow-xl space-y-3.5 sm:space-y-4 flex flex-col justify-between">
           <div>
-            <div class="flex items-center justify-between flex-wrap gap-2 border-b border-slate-800/60 pb-3">
+            <div class="flex items-center justify-between flex-wrap gap-2 border-b border-slate-800/60 pb-2.5 sm:pb-3">
               <div class="flex items-center space-x-2">
                 <span class="text-amber-500 font-mono text-xs font-bold">02.</span>
-                <h2 id="lblNotesTitle" class="text-sm font-bold tracking-wide text-slate-200 uppercase">Site Walkthrough Notes</h2>
+                <h2 id="lblNotesTitle" class="text-xs sm:text-sm font-bold tracking-wide text-slate-200 uppercase">Site Walkthrough Notes</h2>
               </div>
               
-              <!-- Quick Actions Bar (Photo & Voice) -->
               <div class="flex items-center space-x-2">
-                <label class="bg-slate-800 hover:bg-slate-700/80 active:scale-95 text-amber-400 text-xs font-semibold px-2.5 py-1.5 rounded-xl transition cursor-pointer flex items-center space-x-1.5 border border-slate-700/50 shadow-sm">
+                <label class="bg-slate-800 hover:bg-slate-700/80 active:scale-95 text-amber-400 text-xs font-semibold px-2.5 py-1.5 rounded-xl transition cursor-pointer flex items-center space-x-1 border border-slate-700/50 shadow-sm">
                   <span>📷</span>
                   <span id="lblAddPhoto" class="hidden xs:inline">Add Photo</span>
                   <input type="file" id="cameraInput" accept="image/*" capture="environment" onchange="handlePhotoUpload(event)" class="hidden">
                 </label>
                 
-                <button id="micBtn" onclick="toggleVoiceRecording()" class="bg-slate-800 hover:bg-slate-700/80 active:scale-95 text-slate-300 text-xs font-semibold px-3 py-1.5 rounded-xl transition flex items-center space-x-1.5 border border-slate-700/50 shadow-sm">
+                <button id="micBtn" onclick="toggleVoiceRecording()" class="bg-slate-800 hover:bg-slate-700/80 active:scale-95 text-slate-300 text-xs font-semibold px-2.5 sm:px-3 py-1.5 rounded-xl transition flex items-center space-x-1 border border-slate-700/50 shadow-sm">
                   <span>🎙️</span>
                   <span id="lblVoice">Voice Dictation</span>
                 </button>
@@ -171,62 +161,61 @@
 
             <!-- Photo Thumbnail Preview -->
             <div id="photoPreviewWrapper" class="hidden mt-3 relative inline-block">
-              <img id="photoPreview" class="h-20 w-20 object-cover rounded-xl border-2 border-amber-500/50 shadow-md">
+              <img id="photoPreview" class="h-16 w-16 sm:h-20 sm:w-20 object-cover rounded-xl border-2 border-amber-500/50 shadow-md">
               <button onclick="removePhoto()" class="absolute -top-2 -right-2 bg-rose-600 hover:bg-rose-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold shadow-lg transition">✕</button>
             </div>
             
             <div class="mt-3">
-              <textarea id="notesInput" rows="5" class="w-full bg-slate-950/80 border border-slate-800 rounded-xl p-3 text-xs sm:text-sm text-slate-200 focus:outline-none focus:border-amber-500 transition placeholder:text-slate-600" placeholder="Type or dictate notes...&#10;Ex: Demo old cabinets, install 100 sq ft tile, run new supply lines."></textarea>
+              <textarea id="notesInput" rows="4" class="w-full bg-slate-950/80 border border-slate-800 rounded-xl p-3 text-xs sm:text-sm text-slate-200 focus:outline-none focus:border-amber-500 transition placeholder:text-slate-600" placeholder="Type or dictate notes...&#10;Ex: Demo old cabinets, install 100 sq ft tile, run new supply lines."></textarea>
             </div>
           </div>
 
-          <button id="btnGenerate" onclick="generateEstimate()" class="w-full bg-gradient-to-r from-amber-500 to-brand-600 hover:from-amber-400 hover:to-amber-500 active:scale-[0.99] text-slate-950 font-extrabold py-3 rounded-xl text-xs sm:text-sm shadow-lg shadow-amber-500/10 transition duration-150 uppercase tracking-wide">
+          <button id="btnGenerate" onclick="generateEstimate()" class="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 active:scale-[0.99] text-slate-950 font-extrabold py-3 rounded-xl text-xs sm:text-sm shadow-lg shadow-amber-500/10 transition uppercase tracking-wide">
             Generate Instant Estimate
           </button>
         </div>
 
       </div>
 
-      <!-- PANEL 3: Generated Itemized Output Proposal (Hidden until generated) -->
-      <div id="outputWrapper" class="hidden bg-slate-900/90 p-4 sm:p-6 rounded-2xl border border-slate-800/80 shadow-2xl space-y-6">
+      <!-- PANEL 3: Output Proposal Card -->
+      <div id="outputWrapper" class="hidden bg-slate-900/90 p-3.5 xs:p-4 sm:p-6 rounded-2xl border border-slate-800/80 shadow-2xl space-y-4 sm:space-y-6">
         
         <div class="flex items-center justify-between border-b border-slate-800/80 pb-3 flex-wrap gap-2">
           <div class="flex items-center space-x-2">
             <span class="text-amber-500 font-mono text-xs font-bold">03.</span>
-            <h2 id="lblProposalTitle" class="text-sm font-bold tracking-wide text-slate-200 uppercase">Itemized Proposal</h2>
+            <h2 id="lblProposalTitle" class="text-xs sm:text-sm font-bold tracking-wide text-slate-200 uppercase">Itemized Proposal</h2>
           </div>
-          <button id="btnAddItem" onclick="addNewLineItem()" class="bg-slate-800 hover:bg-slate-700 active:scale-95 text-amber-400 text-xs font-semibold px-3 py-1.5 rounded-xl border border-slate-700/50 transition shadow-sm">
+          <button id="btnAddItem" onclick="addNewLineItem()" class="bg-slate-800 hover:bg-slate-700 active:scale-95 text-amber-400 text-xs font-semibold px-2.5 sm:px-3 py-1.5 rounded-xl border border-slate-700/50 transition shadow-sm">
             + Add Line Item
           </button>
         </div>
 
-        <!-- Render Container (Will be exported to PDF) -->
-        <div id="outputContainer" class="space-y-4 text-xs sm:text-sm bg-slate-950/90 p-4 sm:p-6 rounded-xl border border-slate-800/90 shadow-inner"></div>
+        <div id="outputContainer" class="space-y-3 sm:space-y-4 text-xs sm:text-sm bg-slate-950/90 p-3.5 sm:p-6 rounded-xl border border-slate-800/90 shadow-inner"></div>
 
-        <!-- Universal Interactive Signature Pad -->
-        <div class="bg-slate-950/90 p-4 rounded-xl border border-slate-800/80 space-y-3">
+        <!-- Interactive Signature Pad Area -->
+        <div class="bg-slate-950/90 p-3.5 sm:p-4 rounded-xl border border-slate-800/80 space-y-2.5">
           <div class="flex items-center justify-between">
             <span id="lblSigTitle" class="text-xs font-bold text-slate-300">Client Signature Approval</span>
             <button id="lblClearSig" onclick="clearSignature()" class="text-[11px] text-rose-400 hover:text-rose-300 font-semibold underline cursor-pointer">Clear Signature</button>
           </div>
           
           <div id="canvasParent" class="border border-slate-800 rounded-xl bg-white overflow-hidden touch-none relative shadow-md">
-            <canvas id="sigCanvas" class="w-full h-28 cursor-crosshair block"></canvas>
+            <canvas id="sigCanvas" class="w-full h-24 sm:h-28 cursor-crosshair block"></canvas>
             <div id="sigPlaceholder" class="absolute inset-0 flex items-center justify-center pointer-events-none text-slate-400 text-xs italic">
               Sign here with finger, stylus, or mouse
             </div>
           </div>
         </div>
 
-        <!-- Export & Action Buttons -->
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
-          <button id="btnPdf" onclick="downloadPDF()" class="bg-slate-800 hover:bg-slate-700 active:scale-[0.98] text-slate-200 font-bold py-3 rounded-xl text-xs sm:text-sm transition flex items-center justify-center space-x-2 border border-slate-700/50 shadow">
+        <!-- Export Action Buttons -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3 pt-1">
+          <button id="btnPdf" onclick="downloadPDF()" class="bg-slate-800 hover:bg-slate-700 active:scale-[0.98] text-slate-200 font-bold py-2.5 sm:py-3 rounded-xl text-xs sm:text-sm transition flex items-center justify-center space-x-2 border border-slate-700/50 shadow">
             <span>📄</span> <span>Export PDF</span>
           </button>
-          <button id="btnShare" onclick="shareProposal()" class="bg-sky-600 hover:bg-sky-500 active:scale-[0.98] text-white font-bold py-3 rounded-xl text-xs sm:text-sm transition flex items-center justify-center space-x-2 shadow">
+          <button id="btnShare" onclick="shareProposal()" class="bg-sky-600 hover:bg-sky-500 active:scale-[0.98] text-white font-bold py-2.5 sm:py-3 rounded-xl text-xs sm:text-sm transition flex items-center justify-center space-x-2 shadow">
             <span>📤</span> <span>Text / Share</span>
           </button>
-          <button id="btnSave" onclick="saveEstimate()" class="bg-emerald-600 hover:bg-emerald-500 active:scale-[0.98] text-white font-bold py-3 rounded-xl text-xs sm:text-sm transition flex items-center justify-center space-x-2 shadow">
+          <button id="btnSave" onclick="saveEstimate()" class="bg-emerald-600 hover:bg-emerald-500 active:scale-[0.98] text-white font-bold py-2.5 sm:py-3 rounded-xl text-xs sm:text-sm transition flex items-center justify-center space-x-2 shadow">
             <span>💾</span> <span>Save Local</span>
           </button>
         </div>
@@ -239,26 +228,24 @@
     <div id="historyTab" class="hidden space-y-4">
       <div class="bg-slate-900/90 p-4 sm:p-6 rounded-2xl border border-slate-800/80 shadow-xl space-y-4">
         <div class="flex items-center justify-between border-b border-slate-800/80 pb-3">
-          <h2 id="lblHistoryTitle" class="text-sm font-bold tracking-wide text-slate-200 uppercase">Saved Estimates</h2>
+          <h2 id="lblHistoryTitle" class="text-xs sm:text-sm font-bold tracking-wide text-slate-200 uppercase">Saved Estimates</h2>
           <button id="lblRefresh" onclick="fetchHistory()" class="text-xs text-amber-500 hover:text-amber-400 font-semibold underline">Refresh</button>
         </div>
         
         <div id="historyContainer" class="space-y-3 text-xs sm:text-sm">
-          <p id="lblNoHistory" class="text-slate-500 italic text-center py-8">Click refresh to load saved history...</p>
+          <p id="lblNoHistory" class="text-slate-500 italic text-center py-6 sm:py-8">Click refresh to load saved history...</p>
         </div>
       </div>
     </div>
 
   </main>
 
-  <!-- Responsive Footer -->
-  <footer class="border-t border-slate-900 bg-slate-950 py-4 px-4 text-center text-slate-600 text-[11px] sm:text-xs">
-    <p>JobSight AI Field OS &bull; Desktop, Tablet & Mobile Ready</p>
+  <footer class="border-t border-slate-900 bg-slate-950 py-3 text-center text-slate-600 text-[10px] sm:text-xs">
+    <p>JobSight AI Field OS &bull; Desktop, Tablet & Mobile Scaled</p>
   </footer>
 
-  <!-- App Script Logic -->
   <script>
-    // --- TRANSLATION DICTIONARY ---
+    // --- TRANSLATIONS ---
     const translations = {
       en: {
         subHeader: "Universal Field Operations & Estimate Engine",
@@ -362,15 +349,11 @@
       const sigPlaceholder = document.getElementById('sigPlaceholder');
       if (sigPlaceholder) sigPlaceholder.innerText = t.sigPlaceholder;
 
-      if (currentEstimate) {
-        renderEstimateUI();
-      }
+      if (currentEstimate) renderEstimateUI();
     }
 
-    // --- SUPABASE CLIENT SETUP ---
     const SUPABASE_URL = ''; 
     const SUPABASE_ANON_KEY = ''; 
-    
     let supabaseClient = null;
     if (SUPABASE_URL && SUPABASE_URL.startsWith('http')) {
       try { supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY); } catch (e) {}
@@ -381,7 +364,7 @@
     let recognition = null;
     let isRecording = false;
 
-    // --- UNIVERSAL SIGNATURE CANVAS (PC, MAC, iOS & ANDROID) ---
+    // --- SIGNATURE CANVAS LOGIC ---
     let canvas, ctx, isDrawing = false, hasSigned = false;
 
     function initSignaturePad() {
@@ -392,27 +375,21 @@
       resizeCanvas();
       window.addEventListener('resize', resizeCanvas);
 
-      // Mouse Events
       canvas.addEventListener('mousedown', startDrawing);
       canvas.addEventListener('mousemove', draw);
       window.addEventListener('mouseup', stopDrawing);
 
-      // Touch Events for Tablets & Phones
       canvas.addEventListener('touchstart', (e) => {
         e.preventDefault();
-        const touch = e.touches[0];
-        startDrawing(touch);
+        startDrawing(e.touches[0]);
       }, { passive: false });
 
       canvas.addEventListener('touchmove', (e) => {
         e.preventDefault();
-        const touch = e.touches[0];
-        draw(touch);
+        draw(e.touches[0]);
       }, { passive: false });
 
-      canvas.addEventListener('touchend', (e) => {
-        stopDrawing();
-      });
+      canvas.addEventListener('touchend', stopDrawing);
     }
 
     function resizeCanvas() {
@@ -421,7 +398,7 @@
       const tempImg = hasSigned ? canvas.toDataURL() : null;
 
       canvas.width = rect.width || 300;
-      canvas.height = 112; // 28 * 4 (h-28)
+      canvas.height = window.innerWidth < 640 ? 96 : 112;
 
       ctx.strokeStyle = '#020617';
       ctx.lineWidth = 2.5;
@@ -461,9 +438,7 @@
 
     function stopDrawing() {
       isDrawing = false;
-      if (currentEstimate) {
-        renderEstimateUI();
-      }
+      if (currentEstimate) renderEstimateUI();
     }
 
     function clearSignature() {
@@ -471,9 +446,7 @@
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       hasSigned = false;
       document.getElementById('sigPlaceholder')?.classList.remove('hidden');
-      if (currentEstimate) {
-        renderEstimateUI();
-      }
+      if (currentEstimate) renderEstimateUI();
     }
 
     window.addEventListener('DOMContentLoaded', () => {
@@ -509,7 +482,7 @@
     function toggleVoiceRecording() {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (!SpeechRecognition) {
-        alert(currentLang === 'es' ? "El dictado por voz no es compatible con este navegador." : "Speech recognition not supported on this browser.");
+        alert(currentLang === 'es' ? "El dictado por voz no es compatible." : "Speech recognition not supported.");
         return;
       }
       const micBtn = document.getElementById("micBtn");
@@ -523,7 +496,7 @@
 
         recognition.onstart = () => {
           isRecording = true;
-          micBtn.className = "bg-rose-600 animate-pulse text-white text-xs font-bold px-3 py-1.5 rounded-xl transition flex items-center space-x-1.5 border border-rose-500 shadow-md";
+          micBtn.className = "bg-rose-600 animate-pulse text-white text-xs font-bold px-2.5 sm:px-3 py-1.5 rounded-xl transition flex items-center space-x-1 border border-rose-500 shadow-md";
           micBtn.innerHTML = "<span>🔴</span> <span>Listening...</span>";
         };
         recognition.onresult = (event) => {
@@ -548,7 +521,7 @@
       isRecording = false;
       const micBtn = document.getElementById("micBtn");
       if (micBtn) {
-        micBtn.className = "bg-slate-800 hover:bg-slate-700/80 active:scale-95 text-slate-300 text-xs font-semibold px-3 py-1.5 rounded-xl transition flex items-center space-x-1.5 border border-slate-700/50 shadow-sm";
+        micBtn.className = "bg-slate-800 hover:bg-slate-700/80 active:scale-95 text-slate-300 text-xs font-semibold px-2.5 sm:px-3 py-1.5 rounded-xl transition flex items-center space-x-1 border border-slate-700/50 shadow-sm";
         micBtn.innerHTML = `<span>🎙️</span> <span id="lblVoice">${translations[currentLang].voice}</span>`;
       }
     }
@@ -562,18 +535,18 @@
       if (tab === 'generator') {
         genTab.classList.remove('hidden');
         histTab.classList.add('hidden');
-        genBtn.className = "bg-amber-500 text-slate-950 text-xs font-bold px-3 py-1.5 rounded-lg transition-all shadow";
-        histBtn.className = "text-slate-400 hover:text-slate-200 text-xs font-semibold px-3 py-1.5 rounded-lg transition-all";
+        genBtn.className = "bg-amber-500 text-slate-950 text-xs font-bold px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg transition-all shadow";
+        histBtn.className = "text-slate-400 hover:text-slate-200 text-xs font-semibold px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg transition-all";
       } else {
         genTab.classList.add('hidden');
         histTab.classList.remove('hidden');
-        histBtn.className = "bg-amber-500 text-slate-950 text-xs font-bold px-3 py-1.5 rounded-lg transition-all shadow";
-        genBtn.className = "text-slate-400 hover:text-slate-200 text-xs font-semibold px-3 py-1.5 rounded-lg transition-all";
+        histBtn.className = "bg-amber-500 text-slate-950 text-xs font-bold px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg transition-all shadow";
+        genBtn.className = "text-slate-400 hover:text-slate-200 text-xs font-semibold px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg transition-all";
         fetchHistory();
       }
     }
 
-    // --- ESTIMATE GENERATION ENGINE ---
+    // --- ESTIMATE GENERATION ---
     function generateEstimate() {
       const input = document.getElementById("notesInput").value;
       const companyName = document.getElementById("companyNameInput").value || "ProBuild Services";
@@ -634,13 +607,12 @@
 
       renderEstimateUI();
       
-      // Auto scroll smoothly to output on mobile devices
       setTimeout(() => {
         document.getElementById("outputWrapper")?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }, 100);
     }
 
-    // --- RENDER ESTIMATE PROPOSAL UI ---
+    // --- RENDER PROPOSAL UI ---
     function renderEstimateUI() {
       if (!currentEstimate) return;
       const t = translations[currentLang];
@@ -659,41 +631,41 @@
       const container = document.getElementById("outputContainer");
 
       let html = `
-        <div class="border-b border-slate-800 pb-3 mb-4 flex justify-between items-start flex-wrap gap-2">
+        <div class="border-b border-slate-800 pb-3 mb-3.5 flex justify-between items-start flex-wrap gap-2">
           <div>
             <div class="flex items-center space-x-2">
-              <p class="text-amber-400 font-bold text-sm sm:text-base">${currentEstimate.company_name}</p>
-              <span class="bg-amber-500/10 text-amber-400 border border-amber-500/30 text-[10px] px-2 py-0.5 rounded-md font-mono font-bold">${currentEstimate.order_number}</span>
+              <p class="text-amber-400 font-bold text-xs sm:text-base">${currentEstimate.company_name}</p>
+              <span class="bg-amber-500/10 text-amber-400 border border-amber-500/30 text-[9px] px-1.5 py-0.5 rounded-md font-mono font-bold">${currentEstimate.order_number}</span>
             </div>
-            <p class="text-xs text-slate-400 mt-1">Client: <strong class="text-slate-200">${currentEstimate.client_name}</strong> (${currentEstimate.client_address})</p>
-            <p class="text-[11px] text-amber-500 font-mono mt-0.5">Area Focus: ${currentEstimate.room_category}</p>
+            <p class="text-[11px] sm:text-xs text-slate-400 mt-0.5">Client: <strong class="text-slate-200">${currentEstimate.client_name}</strong> (${currentEstimate.client_address})</p>
+            <p class="text-[10px] sm:text-[11px] text-amber-500 font-mono mt-0.5">Area Focus: ${currentEstimate.room_category}</p>
           </div>
           <div class="text-right">
-            <span class="text-xs text-slate-400 block font-medium">${currentEstimate.created_date}</span>
-            <span class="text-[10px] text-slate-500 font-mono">${currentEstimate.created_time}</span>
+            <span class="text-[11px] sm:text-xs text-slate-400 block font-medium">${currentEstimate.created_date}</span>
+            <span class="text-[9px] sm:text-[10px] text-slate-500 font-mono">${currentEstimate.created_time}</span>
           </div>
         </div>
       `;
       
       currentEstimate.line_items.forEach((item, index) => {
-        html += `<div class="flex items-center justify-between border-b border-slate-900 pb-3 mb-3 gap-2">
+        html += `<div class="flex items-center justify-between border-b border-slate-900 pb-2.5 mb-2.5 gap-2">
           <div class="flex-1 min-w-0">
-            <span class="text-amber-500 font-mono text-[10px] uppercase block tracking-wider">[${item.category}]</span> 
-            <input type="text" value="${item.description}" onchange="updateItemDesc(${index}, this.value)" class="w-full bg-slate-900/90 text-slate-200 border border-slate-800 rounded-lg px-2 py-1 text-xs mt-1 focus:outline-none focus:border-amber-500 transition">
+            <span class="text-amber-500 font-mono text-[9px] sm:text-[10px] uppercase block tracking-wider">[${item.category}]</span> 
+            <input type="text" value="${item.description}" onchange="updateItemDesc(${index}, this.value)" class="w-full bg-slate-900/90 text-slate-200 border border-slate-800 rounded-lg px-2 py-1 text-xs mt-0.5 focus:outline-none focus:border-amber-500 transition">
           </div>
-          <div class="w-24 text-right shrink-0">
-            <span class="text-[10px] text-slate-500 block font-medium">Total ($)</span>
+          <div class="w-20 sm:w-24 text-right shrink-0">
+            <span class="text-[9px] sm:text-[10px] text-slate-500 block font-medium">Total ($)</span>
             <input type="number" value="${item.total_cost}" onchange="updateItemCost(${index}, this.value)" class="w-full bg-slate-900/90 text-emerald-400 font-bold border border-slate-800 rounded-lg px-2 py-1 text-xs text-right focus:outline-none focus:border-amber-500 transition">
           </div>
           <button onclick="removeLineItem(${index})" class="text-rose-400 hover:text-rose-300 p-1 text-sm mt-3 transition shrink-0" title="Delete item">🗑️</button>
         </div>`;
       });
 
-      html += `<div class="pt-3 text-xs sm:text-sm space-y-1.5 border-t border-slate-800 mt-4 text-slate-400">
+      html += `<div class="pt-2.5 text-xs sm:text-sm space-y-1.5 border-t border-slate-800 mt-3 text-slate-400">
         <div class="flex justify-between"><span>${t.subtotal}</span><span>$${subtotal}</span></div>
         <div class="flex justify-between"><span>${t.contingency}</span><span>$${contingency}</span></div>
         <div class="flex justify-between"><span>${t.tax}</span><span>$${tax}</span></div>
-        <div class="flex justify-between font-extrabold text-slate-100 pt-2 border-t border-slate-800 text-sm sm:text-base">
+        <div class="flex justify-between font-extrabold text-slate-100 pt-1.5 border-t border-slate-800 text-xs sm:text-base">
           <span>${t.grandTotal}</span>
           <span class="text-amber-400">$${grand_total}</span>
         </div>
@@ -701,25 +673,25 @@
 
       if (currentSitePhoto) {
         html += `
-          <div class="mt-4 pt-3 border-t border-slate-800">
-            <p class="text-xs text-slate-400 font-semibold mb-2">${t.sitePhotoLabel}</p>
-            <img src="${currentSitePhoto}" class="max-h-48 w-auto rounded-xl border border-slate-800 object-contain shadow-md">
+          <div class="mt-3.5 pt-3 border-t border-slate-800">
+            <p class="text-[11px] sm:text-xs text-slate-400 font-semibold mb-1.5">${t.sitePhotoLabel}</p>
+            <img src="${currentSitePhoto}" class="max-h-40 sm:max-h-48 w-auto rounded-xl border border-slate-800 object-contain shadow-md">
           </div>
         `;
       }
 
       const sigDataUrl = (canvas && hasSigned) ? canvas.toDataURL() : null;
       html += `
-        <div class="mt-5 pt-4 border-t border-slate-800 text-[11px] sm:text-xs text-slate-400 space-y-3">
+        <div class="mt-4 pt-3 border-t border-slate-800 text-[10px] sm:text-xs text-slate-400 space-y-2.5">
           <p class="font-bold text-slate-300">${t.termsTitle}</p>
-          <p class="leading-relaxed">${t.termsText}</p>
-          <div class="pt-4 grid grid-cols-2 gap-6 items-end">
+          <p class="leading-relaxed text-[10px] sm:text-[11px]">${t.termsText}</p>
+          <div class="pt-3 grid grid-cols-2 gap-4 items-end">
             <div>
-              <span class="text-[10px] text-slate-500 block border-b border-slate-700 pb-6 font-medium">${t.contractorSig}</span>
+              <span class="text-[9px] sm:text-[10px] text-slate-500 block border-b border-slate-700 pb-5 font-medium">${t.contractorSig}</span>
             </div>
             <div>
-              ${sigDataUrl ? `<img src="${sigDataUrl}" class="h-10 border-b border-slate-700 pb-1">` : `<div class="border-b border-slate-700 pb-6"></div>`}
-              <span class="text-[10px] text-slate-500 block pt-1 font-medium">${t.clientSig}</span>
+              ${sigDataUrl ? `<img src="${sigDataUrl}" class="h-8 sm:h-10 border-b border-slate-700 pb-1">` : `<div class="border-b border-slate-700 pb-5"></div>`}
+              <span class="text-[9px] sm:text-[10px] text-slate-500 block pt-1 font-medium">${t.clientSig}</span>
             </div>
           </div>
         </div>
@@ -772,7 +744,7 @@
         } catch (e) {}
       }
 
-      alert(currentLang === 'es' ? "¡Presupuesto guardado con éxito en el almacenamiento local!" : "Estimate successfully saved to local storage!");
+      alert(currentLang === 'es' ? "¡Presupuesto guardado localmente!" : "Estimate saved to local storage!");
     }
 
     async function fetchHistory() {
@@ -794,16 +766,16 @@
       if (allRecords.length > 0) {
         let html = '';
         allRecords.forEach(est => {
-          html += `<div class="bg-slate-950/90 p-4 rounded-xl border border-slate-800 flex justify-between items-center flex-wrap gap-2 shadow-sm">
+          html += `<div class="bg-slate-950/90 p-3.5 rounded-xl border border-slate-800 flex justify-between items-center flex-wrap gap-2 shadow-sm">
             <div>
               <div class="flex items-center space-x-2">
                 <p class="font-bold text-amber-400 text-xs sm:text-sm">${est.company_name} - ${est.client_name}</p>
                 <span class="bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[9px] px-1.5 py-0.5 rounded font-mono font-bold">${est.order_number || '#JS-0000'}</span>
               </div>
-              <p class="text-[11px] text-slate-400 mt-0.5">${est.client_address} (${est.room_category || 'General'})</p>
-              <p class="text-[10px] text-slate-500 mt-0.5">${est.created_date || ''} at ${est.created_time || ''}</p>
+              <p class="text-[10px] sm:text-[11px] text-slate-400 mt-0.5">${est.client_address} (${est.room_category || 'General'})</p>
+              <p class="text-[9px] sm:text-[10px] text-slate-500 mt-0.5">${est.created_date || ''} at ${est.created_time || ''}</p>
             </div>
-            <span class="font-extrabold text-emerald-400 text-sm sm:text-base">$${est.summary?.grand_total || 0}</span>
+            <span class="font-extrabold text-emerald-400 text-xs sm:text-base">$${est.summary?.grand_total || 0}</span>
           </div>`;
         });
         container.innerHTML = html;
