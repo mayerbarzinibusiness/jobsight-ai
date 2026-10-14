@@ -13,7 +13,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
-  <!-- Leaflet CSS & JS for Free Open-Source Interactive Maps -->
+  <!-- Leaflet CSS & JS for Free Open-Source Satellite Maps -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
@@ -60,8 +60,8 @@
   <header class="sticky top-0 z-40 bg-slate-950/95 backdrop-blur border-b border-slate-800 p-3">
     <div class="max-w-3xl mx-auto flex items-center justify-between gap-2">
       <div class="flex items-center space-x-2 min-w-0">
-        <div class="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center shrink-0">
-          <span class="text-lg">🛠️</span>
+        <div id="headerLogoWrapper" class="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center shrink-0 overflow-hidden">
+          <span id="headerLogoIcon" class="text-lg">🛠️</span>
         </div>
         <div class="truncate">
           <h1 class="text-base font-bold text-amber-500 leading-tight">JobSight AI</h1>
@@ -93,13 +93,28 @@
       <div class="bg-slate-900 p-4 rounded-2xl border border-slate-800 space-y-3 shadow-lg">
         <div class="flex items-center space-x-2 border-b border-slate-800 pb-2">
           <span class="text-amber-500 font-mono text-xs font-bold">01.</span>
-          <h2 id="lblDetailsTitle" class="text-xs font-bold text-amber-400 uppercase tracking-wide">Proposal Details</h2>
+          <h2 id="lblDetailsTitle" class="text-xs font-bold text-amber-400 uppercase tracking-wide">Proposal Details & Logo</h2>
         </div>
 
         <div class="space-y-3">
-          <div>
-            <label id="lblCompany" class="text-xs text-slate-400 block mb-1">Company Name</label>
-            <input type="text" id="companyNameInput" value="ProBuild Services">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label id="lblCompany" class="text-xs text-slate-400 block mb-1">Company Name</label>
+              <input type="text" id="companyNameInput" value="ProBuild Services">
+            </div>
+            <div>
+              <label class="text-xs text-slate-400 block mb-1">Company Logo</label>
+              <label class="bg-slate-800 hover:bg-slate-700 text-amber-400 text-xs font-bold px-3 py-2.5 rounded-xl cursor-pointer flex items-center justify-center space-x-2 border border-slate-700">
+                <span>📁</span>
+                <span id="lblUploadLogo">Upload Logo</span>
+                <input type="file" id="logoInput" accept="image/*" onchange="handleLogoUpload(event)" class="hidden">
+              </label>
+            </div>
+          </div>
+
+          <div id="logoPreviewWrapper" class="hidden items-center space-x-3 pt-1">
+            <img id="logoPreview" class="h-10 w-10 object-contain rounded-lg border border-amber-500 bg-slate-950 p-1">
+            <button onclick="removeLogo()" class="text-rose-400 text-xs underline font-semibold">Remove Logo</button>
           </div>
 
           <div class="grid grid-cols-1 gap-3">
@@ -109,7 +124,7 @@
             </div>
             <div>
               <label id="lblAddress" class="text-xs text-slate-400 block mb-1">Job Address</label>
-              <input type="text" id="clientAddressInput" value="123 Maple Street, Austin TX">
+              <input type="text" id="clientAddressInput" value="123 Maple Street, Austin TX" onchange="geocodeAndCenterMap()">
             </div>
           </div>
 
@@ -241,7 +256,7 @@
     <div id="historyTab" class="hidden space-y-4">
       <div class="bg-slate-900 p-4 rounded-2xl border border-slate-800 space-y-3 shadow-lg">
         <div class="flex items-center justify-between border-b border-slate-800 pb-2">
-          <h2 id="lblHistoryTitle" class="text-xs font-bold text-slate-200 uppercase">Saved Estimates</h2>
+          <h2 id="lblHistoryTitle" class="text-xs font-bold text-slate-200 uppercase">Saved Estimates & History</h2>
           <button id="lblRefresh" onclick="fetchHistory()" class="text-xs text-amber-500 underline font-semibold">Refresh</button>
         </div>
         <div id="historyContainer" class="space-y-2.5">
@@ -263,7 +278,7 @@
         tabGen: "Gen",
         tabRoof: "Roof 📐",
         tabHist: "History",
-        detailsTitle: "Proposal Details",
+        detailsTitle: "Proposal Details & Logo",
         company: "Company Name",
         client: "Client Name",
         address: "Job Address",
@@ -276,7 +291,7 @@
         addItem: "+ Item",
         sigTitle: "Client Signature Approval",
         clearSig: "Clear",
-        historyTitle: "Saved Estimates",
+        historyTitle: "Saved Estimates & History",
         refresh: "Refresh",
         noHistory: "Click refresh to load history...",
         termsTitle: "Terms & Conditions:",
@@ -295,7 +310,7 @@
         tabGen: "Gen",
         tabRoof: "Techo 📐",
         tabHist: "Historial",
-        detailsTitle: "Detalles de Propuesta",
+        detailsTitle: "Detalles de Propuesta y Logo",
         company: "Nombre de la Empresa",
         client: "Nombre del Cliente",
         address: "Dirección del Trabajo",
@@ -308,7 +323,7 @@
         addItem: "+ Ítem",
         sigTitle: "Firma y Aprobación del Cliente",
         clearSig: "Borrar",
-        historyTitle: "Presupuestos Guardados",
+        historyTitle: "Presupuestos Guardados e Historial",
         refresh: "Actualizar",
         noHistory: "Haga clic en actualizar...",
         termsTitle: "Términos y Condiciones:",
@@ -366,6 +381,7 @@
 
     let currentEstimate = null;
     let currentSitePhoto = null;
+    let customLogoBase64 = localStorage.getItem('jobsight_logo') || null;
     let recognition = null;
     let isRecording = false;
 
@@ -376,12 +392,47 @@
     let markerLayers = [];
     let rawSquareMeters = 0;
 
+    window.addEventListener('DOMContentLoaded', () => {
+      initSignaturePad();
+      if (customLogoBase64) {
+        applyLogoToHeader(customLogoBase64);
+      }
+    });
+
+    function handleLogoUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        customLogoBase64 = e.target.result;
+        localStorage.setItem('jobsight_logo', customLogoBase64);
+        applyLogoToHeader(customLogoBase64);
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function applyLogoToHeader(base64) {
+      const wrapper = document.getElementById('headerLogoWrapper');
+      wrapper.innerHTML = `<img src="${base64}" class="w-full h-full object-cover rounded-xl">`;
+      document.getElementById('logoPreview').src = base64;
+      document.getElementById('logoPreviewWrapper').classList.remove('hidden');
+      document.getElementById('logoPreviewWrapper').classList.add('flex');
+    }
+
+    function removeLogo() {
+      customLogoBase64 = null;
+      localStorage.removeItem('jobsight_logo');
+      const wrapper = document.getElementById('headerLogoWrapper');
+      wrapper.innerHTML = `<span id="headerLogoIcon" class="text-lg">🛠️</span>`;
+      document.getElementById('logoPreviewWrapper').classList.remove('flex');
+      document.getElementById('logoPreviewWrapper').classList.add('hidden');
+      document.getElementById('logoInput').value = '';
+    }
+
     function initLeafletMap() {
       if (leafletMap) return;
-      // Default to Austin, TX until address is geocoded or adjusted
       leafletMap = L.map('map').setView([30.2672, -97.7431], 19);
 
-      // Add High-Resolution Esri World Imagery (Satellite Bird's Eye View)
       L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
         attribution: 'Tiles &copy; Esri',
         maxZoom: 20
@@ -396,7 +447,6 @@
       const address = document.getElementById("clientAddressInput").value;
       if (!address) return;
       
-      // Use free Nominatim OpenStreetMap Geocoder
       fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}`)
         .then(response => response.json())
         .then(data => {
@@ -439,11 +489,10 @@
       }
     }
 
-    // Shoelace formula for spherical/planar polygon area approximation in square meters
     function calculatePolygonArea(latlngs) {
       if (latlngs.length < 3) return 0;
       let total = 0;
-      const earthRadius = 6378137; // meters
+      const earthRadius = 6378137;
       for (let i = 0; i < latlngs.length; i++) {
         const p1 = latlngs[i];
         const p2 = latlngs[(i + 1) % latLngs.length];
@@ -487,10 +536,6 @@
       switchTab('generator');
       alert("Roof measurement added to proposal notes!");
     }
-
-    window.addEventListener('DOMContentLoaded', () => {
-      initSignaturePad();
-    });
 
     function handlePhotoUpload(event) {
       const file = event.target.files[0];
@@ -677,7 +722,7 @@
             <p class="text-[11px] text-slate-400 mt-0.5">Client: <strong class="text-slate-200">${currentEstimate.client_name}</strong></p>
           </div>
           <div class="text-right shrink-0">
-            <span class="text-[10px] text-slate-400 block">${currentEstimate.created_date}</span>
+            <span class="text-[10px] text-amber-400 font-bold block">${currentEstimate.created_date} &bull; ${currentEstimate.created_time}</span>
           </div>
         </div>
       `;
@@ -766,7 +811,15 @@
       const record = { ...currentEstimate, site_photo: currentSitePhoto, client_signature: sigImage, timestamp: Date.now() };
 
       let localHistory = JSON.parse(localStorage.getItem('jobsight_estimates') || '[]');
-      localHistory.unshift(record);
+      
+      // Check if updating existing record or adding new
+      const existingIndex = localHistory.findIndex(e => e.order_number === currentEstimate.order_number);
+      if (existingIndex >= 0) {
+        localHistory[existingIndex] = record;
+      } else {
+        localHistory.unshift(record);
+      }
+
       localStorage.setItem('jobsight_estimates', JSON.stringify(localHistory));
 
       if (supabaseClient) {
@@ -780,25 +833,23 @@
       const container = document.getElementById("historyContainer");
       let allRecords = JSON.parse(localStorage.getItem('jobsight_estimates') || '[]');
 
-      if (supabaseClient) {
-        try {
-          const { data } = await supabaseClient.from('estimates').select('*').order('created_at', { ascending: false });
-          if (data) { data.forEach(row => { if (row.estimate_data) allRecords.push(row.estimate_data); }); }
-        } catch (e) {}
-      }
-
       if (allRecords.length > 0) {
         let html = '';
-        allRecords.forEach(est => {
+        allRecords.forEach((est, idx) => {
           html += `<div class="bg-slate-950 p-3 rounded-xl border border-slate-800 flex justify-between items-center gap-2">
-            <div>
-              <div class="flex items-center space-x-1.5">
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center space-x-1.5 flex-wrap">
                 <p class="font-bold text-amber-400 text-xs">${est.company_name} - ${est.client_name}</p>
                 <span class="bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[9px] px-1 py-0.5 rounded font-mono">${est.order_number || '#JS-0000'}</span>
               </div>
               <p class="text-[10px] text-slate-400 mt-0.5">${est.client_address}</p>
+              <p class="text-[9px] text-amber-500/80 mt-0.5">${est.created_date} &bull; ${est.created_time}</p>
             </div>
-            <span class="font-extrabold text-emerald-400 text-xs">$${est.summary?.grand_total || 0}</span>
+            <div class="text-right shrink-0 flex items-center space-x-2">
+              <span class="font-extrabold text-emerald-400 text-xs">$${est.summary?.grand_total || 0}</span>
+              <button onclick="reopenEstimate(${idx})" class="bg-slate-800 hover:bg-slate-700 text-amber-400 text-xs px-2 py-1.5 rounded-lg font-bold" title="Edit & Reopen">✏️</button>
+              <button onclick="deleteEstimate(${idx})" class="bg-rose-950/60 hover:bg-rose-900 text-rose-400 text-xs px-2 py-1.5 rounded-lg" title="Delete">🗑️</button>
+            </div>
           </div>`;
         });
         container.innerHTML = html;
@@ -807,27 +858,72 @@
       }
     }
 
+    function reopenEstimate(index) {
+      let localHistory = JSON.parse(localStorage.getItem('jobsight_estimates') || '[]');
+      if (!localHistory[index]) return;
+
+      currentEstimate = localHistory[index];
+      document.getElementById('companyNameInput').value = currentEstimate.company_name;
+      document.getElementById('clientNameInput').value = currentEstimate.client_name;
+      document.getElementById('clientAddressInput').value = currentEstimate.client_address;
+      document.getElementById('roomCategorySelect').value = currentEstimate.room_category || 'General & Whole House';
+      
+      currentSitePhoto = currentEstimate.site_photo || null;
+      if (currentSitePhoto) {
+        document.getElementById('photoPreview').src = currentSitePhoto;
+        document.getElementById('photoPreviewWrapper').classList.remove('hidden');
+      } else {
+        document.getElementById('photoPreviewWrapper').classList.add('hidden');
+      }
+
+      renderEstimateUI();
+      switchTab('generator');
+    }
+
+    function deleteEstimate(index) {
+      if (!confirm("Are you sure you want to delete this saved estimate?")) return;
+      let localHistory = JSON.parse(localStorage.getItem('jobsight_estimates') || '[]');
+      localHistory.splice(index, 1);
+      localStorage.setItem('jobsight_estimates', JSON.stringify(localHistory));
+      fetchHistory();
+    }
+
     function downloadPDF() {
       if (!currentEstimate) return;
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF({ unit: 'pt', format: 'letter' });
 
       let y = 40;
-      doc.setFont("Helvetica", "bold");
-      doc.setFontSize(18);
-      doc.text(currentEstimate.company_name, 40, y);
+      
+      // Include custom logo in PDF if available
+      if (customLogoBase64) {
+        try {
+          doc.addImage(customLogoBase64, 'PNG', 40, y - 5, 35, 35);
+          doc.setFont("Helvetica", "bold");
+          doc.setFontSize(18);
+          doc.text(currentEstimate.company_name, 85, y + 18);
+        } catch (e) {
+          doc.setFont("Helvetica", "bold");
+          doc.setFontSize(18);
+          doc.text(currentEstimate.company_name, 40, y);
+        }
+      } else {
+        doc.setFont("Helvetica", "bold");
+        doc.setFontSize(18);
+        doc.text(currentEstimate.company_name, 40, y);
+      }
 
       doc.setFontSize(10);
       doc.setFont("Helvetica", "normal");
-      doc.text(`Order: ${currentEstimate.order_number}`, 40, y + 15);
-      doc.text(`Date: ${currentEstimate.created_date}`, 40, y + 27);
+      doc.text(`Order: ${currentEstimate.order_number}`, 40, y + 32);
+      doc.text(`Date & Time: ${currentEstimate.created_date} at ${currentEstimate.created_time}`, 40, y + 45);
 
       doc.setFont("Helvetica", "bold");
       doc.text(`Client: ${currentEstimate.client_name}`, 400, y);
       doc.setFont("Helvetica", "normal");
       doc.text(currentEstimate.client_address, 400, y + 15);
 
-      y += 50;
+      y += 65;
       doc.setLineWidth(1);
       doc.line(40, y, 572, y);
 
@@ -894,7 +990,7 @@
 
     function shareProposal() {
       if (!currentEstimate) return;
-      const textSummary = `*Estimate ${currentEstimate.order_number} from ${currentEstimate.company_name}*\nClient: ${currentEstimate.client_name}\nTotal: $${currentEstimate.summary.grand_total}`;
+      const textSummary = `*Estimate ${currentEstimate.order_number} from ${currentEstimate.company_name}*\nClient: ${currentEstimate.client_name}\nTotal: $${currentEstimate.summary.grand_total}\nDate: ${currentEstimate.created_date} at ${currentEstimate.created_time}`;
       if (navigator.share) {
         navigator.share({ title: 'JobSight Estimate', text: textSummary }).catch(() => {});
       } else {
