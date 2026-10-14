@@ -24,9 +24,14 @@
     <header class="flex justify-between items-center border-b border-slate-800 pb-4 pt-2">
       <div>
         <h1 class="text-xl font-bold text-amber-500">JobSight AI</h1>
-        <p class="text-xs text-slate-400">Field Operations & Estimate Engine</p>
+        <p id="subHeader" class="text-xs text-slate-400">Field Operations & Estimate Engine</p>
       </div>
-      <div class="flex space-x-2">
+      <div class="flex items-center space-x-2">
+        <!-- Language Selector -->
+        <select id="langSelect" onchange="switchLanguage(this.value)" class="bg-slate-900 border border-slate-800 text-amber-400 text-xs font-semibold px-2 py-1.5 rounded-lg focus:outline-none">
+          <option value="en">🇺🇸 EN</option>
+          <option value="es">🇪🇸 ES</option>
+        </select>
         <button onclick="switchTab('generator')" id="tabGenBtn" class="bg-amber-500 text-slate-950 text-xs font-bold px-3 py-1.5 rounded-lg transition">Generator</button>
         <button onclick="switchTab('history')" id="tabHistBtn" class="bg-slate-800 text-slate-300 text-xs font-semibold px-3 py-1.5 rounded-lg transition">History</button>
       </div>
@@ -37,30 +42,30 @@
       
       <!-- Job & Branding Details Panel -->
       <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 space-y-3">
-        <h2 class="text-sm font-semibold text-amber-400">1. Proposal & Branding Details</h2>
+        <h2 id="lblDetailsTitle" class="text-sm font-semibold text-amber-400">1. Proposal & Branding Details</h2>
         <div class="grid grid-cols-2 gap-2">
           <div>
-            <label class="text-[10px] text-slate-400 block mb-1">Contractor / Company Name</label>
+            <label id="lblCompany" class="text-[10px] text-slate-400 block mb-1">Contractor / Company Name</label>
             <input type="text" id="companyNameInput" value="ProBuild Services" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-slate-200 focus:outline-none focus:border-amber-500">
           </div>
           <div>
-            <label class="text-[10px] text-slate-400 block mb-1">Client Name</label>
+            <label id="lblClient" class="text-[10px] text-slate-400 block mb-1">Client Name</label>
             <input type="text" id="clientNameInput" value="John Smith" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-slate-200 focus:outline-none focus:border-amber-500">
           </div>
         </div>
         <div class="grid grid-cols-2 gap-2">
           <div>
-            <label class="text-[10px] text-slate-400 block mb-1">Property / Job Address</label>
+            <label id="lblAddress" class="text-[10px] text-slate-400 block mb-1">Property / Job Address</label>
             <input type="text" id="clientAddressInput" value="123 Maple Street, Austin TX" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-slate-200 focus:outline-none focus:border-amber-500">
           </div>
           <div>
-            <label class="text-[10px] text-slate-400 block mb-1">Job Area / Room Focus</label>
+            <label id="lblArea" class="text-[10px] text-slate-400 block mb-1">Job Area / Room Focus</label>
             <select id="roomCategorySelect" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-amber-400 font-bold focus:outline-none focus:border-amber-500">
               <option value="General & Whole House">General / Whole House</option>
-              <option value="Kitchen Remodel">Kitchen</option>
-              <option value="Master Bathroom">Master Bathroom</option>
+              <option value="Kitchen Remodel">Kitchen / Cocina</option>
+              <option value="Master Bathroom">Bathroom / Baño</option>
               <option value="Exterior & Roofing">Exterior / Roofing</option>
-              <option value="Basement / Addition">Basement / Addition</option>
+              <option value="Basement / Addition">Basement / Adición</option>
             </select>
           </div>
         </div>
@@ -69,14 +74,14 @@
       <!-- Walkthrough Notes Panel -->
       <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 space-y-3">
         <div class="flex justify-between items-center flex-wrap gap-2">
-          <h2 class="text-sm font-semibold text-slate-200">2. Site Walkthrough Notes</h2>
+          <h2 id="lblNotesTitle" class="text-sm font-semibold text-slate-200">2. Site Walkthrough Notes</h2>
           <div class="flex space-x-2">
             <label class="bg-slate-800 hover:bg-slate-700 text-amber-400 text-xs font-semibold px-2.5 py-1.5 rounded-lg transition cursor-pointer flex items-center space-x-1">
-              <span>📷 Add Photo</span>
+              <span id="lblAddPhoto">📷 Add Photo</span>
               <input type="file" id="cameraInput" accept="image/*" capture="environment" onchange="handlePhotoUpload(event)" class="hidden">
             </label>
             <button id="micBtn" onclick="toggleVoiceRecording()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold px-3 py-1.5 rounded-lg transition flex items-center space-x-1.5">
-              <span>🎙️ Voice Dictation</span>
+              <span>🎙️ <span id="lblVoice">Voice Dictation</span></span>
             </button>
           </div>
         </div>
@@ -89,7 +94,7 @@
         
         <textarea id="notesInput" rows="4" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-sm text-slate-200 focus:outline-none focus:border-amber-500" placeholder="Type or dictate notes...&#10;Ex: Demo old cabinets, install 100 sq ft tile, run new supply lines."></textarea>
         
-        <button onclick="generateEstimate()" class="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold py-2.5 rounded-lg text-sm transition">
+        <button id="btnGenerate" onclick="generateEstimate()" class="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold py-2.5 rounded-lg text-sm transition">
           Generate Instant Estimate
         </button>
       </div>
@@ -97,8 +102,8 @@
       <!-- Output Panel -->
       <div id="outputWrapper" class="hidden bg-slate-900 p-4 rounded-xl border border-slate-800 space-y-4">
         <div class="flex justify-between items-center border-b border-slate-800 pb-2">
-          <h2 class="text-sm font-semibold text-slate-200">3. Itemized Proposal</h2>
-          <button onclick="addNewLineItem()" class="bg-slate-800 hover:bg-slate-700 text-amber-400 text-xs font-semibold px-2.5 py-1 rounded transition">
+          <h2 id="lblProposalTitle" class="text-sm font-semibold text-slate-200">3. Itemized Proposal</h2>
+          <button id="btnAddItem" onclick="addNewLineItem()" class="bg-slate-800 hover:bg-slate-700 text-amber-400 text-xs font-semibold px-2.5 py-1 rounded transition">
             + Add Line Item
           </button>
         </div>
@@ -108,8 +113,8 @@
         <!-- Interactive Signature Pad Area -->
         <div class="bg-slate-950 p-3 rounded-lg border border-slate-800 space-y-2">
           <div class="flex justify-between items-center">
-            <span class="text-xs font-semibold text-slate-300">Client Signature Approval</span>
-            <button onclick="clearSignature()" class="text-[10px] text-rose-400 hover:underline">Clear Sign</button>
+            <span id="lblSigTitle" class="text-xs font-semibold text-slate-300">Client Signature Approval</span>
+            <button id="lblClearSig" onclick="clearSignature()" class="text-[10px] text-rose-400 hover:underline">Clear Sign</button>
           </div>
           <div class="border border-slate-800 rounded bg-white overflow-hidden touch-none">
             <canvas id="sigCanvas" height="100" class="w-full cursor-crosshair"></canvas>
@@ -117,13 +122,13 @@
         </div>
 
         <div class="grid grid-cols-3 gap-2 pt-2">
-          <button onclick="downloadPDF()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold py-2 rounded-lg text-xs transition">
+          <button id="btnPdf" onclick="downloadPDF()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold py-2 rounded-lg text-xs transition">
             📄 Export PDF
           </button>
-          <button onclick="shareProposal()" class="bg-sky-600 hover:bg-sky-500 text-white font-semibold py-2 rounded-lg text-xs transition">
+          <button id="btnShare" onclick="shareProposal()" class="bg-sky-600 hover:bg-sky-500 text-white font-semibold py-2 rounded-lg text-xs transition">
             📤 Text / Share
           </button>
-          <button onclick="saveEstimate()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-2 rounded-lg text-xs transition">
+          <button id="btnSave" onclick="saveEstimate()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-2 rounded-lg text-xs transition">
             💾 Save Local
           </button>
         </div>
@@ -134,11 +139,11 @@
     <div id="historyTab" class="hidden space-y-4">
       <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 space-y-3">
         <div class="flex justify-between items-center">
-          <h2 class="text-sm font-semibold text-slate-200">Saved Estimates (Local & Cloud)</h2>
-          <button onclick="fetchHistory()" class="text-xs text-amber-500 hover:underline">Refresh</button>
+          <h2 id="lblHistoryTitle" class="text-sm font-semibold text-slate-200">Saved Estimates</h2>
+          <button id="lblRefresh" onclick="fetchHistory()" class="text-xs text-amber-500 hover:underline">Refresh</button>
         </div>
         <div id="historyContainer" class="space-y-3 text-xs">
-          <p class="text-slate-500 italic">Click refresh to load history...</p>
+          <p id="lblNoHistory" class="text-slate-500 italic">Click refresh to load history...</p>
         </div>
       </div>
     </div>
@@ -146,6 +151,113 @@
   </div>
 
   <script>
+    // --- TRANSLATION DICTIONARY ---
+    const translations = {
+      en: {
+        subHeader: "Field Operations & Estimate Engine",
+        tabGen: "Generator",
+        tabHist: "History",
+        detailsTitle: "1. Proposal & Branding Details",
+        company: "Contractor / Company Name",
+        client: "Client Name",
+        address: "Property / Job Address",
+        area: "Job Area / Room Focus",
+        notesTitle: "2. Site Walkthrough Notes",
+        addPhoto: "📷 Add Photo",
+        voice: "Voice Dictation",
+        notesPlaceholder: "Type or dictate notes...\nEx: Demo old cabinets, install 100 sq ft tile, run new supply lines.",
+        generate: "Generate Instant Estimate",
+        proposalTitle: "3. Itemized Proposal",
+        addItem: "+ Add Line Item",
+        sigTitle: "Client Signature Approval",
+        clearSig: "Clear Sign",
+        btnPdf: "📄 Export PDF",
+        btnShare: "📤 Text / Share",
+        btnSave: "💾 Save Local",
+        historyTitle: "Saved Estimates",
+        refresh: "Refresh",
+        noHistory: "Click refresh to load history...",
+        termsTitle: "Terms & Conditions:",
+        termsText: "Payment due upon completion. This estimate is valid for 30 days from issuance. Any unforeseen structural damage will be billed separately upon client approval.",
+        contractorSig: "Contractor Signature",
+        clientSig: "Client Approval Signature",
+        subtotal: "Subtotal:",
+        contingency: "Contingency (10%):",
+        tax: "Est. Tax (8%):",
+        grandTotal: "Grand Total:",
+        sitePhotoLabel: "Site Inspection Photo:"
+      },
+      es: {
+        subHeader: "Motor de Operaciones y Presupuestos",
+        tabGen: "Generador",
+        tabHist: "Historial",
+        detailsTitle: "1. Detalles de Propuesta y Marca",
+        company: "Nombre del Contratista / Empresa",
+        client: "Nombre del Cliente",
+        address: "Dirección de la Propiedad / Trabajo",
+        area: "Área de Trabajo / Enfoque",
+        notesTitle: "2. Notas de Inspección del Sitio",
+        addPhoto: "📷 Añadir Foto",
+        voice: "Dictado por Voz",
+        notesPlaceholder: "Escriba o dicte las notas...\nEj: Demoler gabinetes, instalar 100 pies cuadrados de azulejo, tubería nueva.",
+        generate: "Generar Presupuesto Instantáneo",
+        proposalTitle: "3. Propuesta Detallada",
+        addItem: "+ Añadir Ítem",
+        sigTitle: "Aprobación y Firma del Cliente",
+        clearSig: "Borrar Firma",
+        btnPdf: "📄 Exportar PDF",
+        btnShare: "📤 Enviar / Compartir",
+        btnSave: "💾 Guardar Local",
+        historyTitle: "Presupuestos Guardados",
+        refresh: "Actualizar",
+        noHistory: "Haga clic en actualizar para cargar el historial...",
+        termsTitle: "Términos y Condiciones:",
+        termsText: "Pago vencido al finalizar. Este presupuesto es válido por 30 días a partir de su emisión. Cualquier daño estructural imprevisto se facturará por separado.",
+        contractorSig: "Firma del Contratista",
+        clientSig: "Firma de Aprobación del Cliente",
+        subtotal: "Subtotal:",
+        contingency: "Contingencia (10%):",
+        tax: "Impuesto Est. (8%):",
+        grandTotal: "Gran Total:",
+        sitePhotoLabel: "Foto de Inspección:"
+      }
+    };
+
+    let currentLang = 'en';
+
+    function switchLanguage(lang) {
+      currentLang = lang;
+      const t = translations[lang];
+
+      document.getElementById('subHeader').innerText = t.subHeader;
+      document.getElementById('tabGenBtn').innerText = t.tabGen;
+      document.getElementById('tabHistBtn').innerText = t.tabHist;
+      document.getElementById('lblDetailsTitle').innerText = t.detailsTitle;
+      document.getElementById('lblCompany').innerText = t.company;
+      document.getElementById('lblClient').innerText = t.client;
+      document.getElementById('lblAddress').innerText = t.address;
+      document.getElementById('lblArea').innerText = t.area;
+      document.getElementById('lblNotesTitle').innerText = t.notesTitle;
+      document.getElementById('lblAddPhoto').innerText = t.addPhoto;
+      document.getElementById('lblVoice').innerText = t.voice;
+      document.getElementById('notesInput').placeholder = t.notesPlaceholder;
+      document.getElementById('btnGenerate').innerText = t.generate;
+      document.getElementById('lblProposalTitle').innerText = t.proposalTitle;
+      document.getElementById('btnAddItem').innerText = t.addItem;
+      document.getElementById('lblSigTitle').innerText = t.sigTitle;
+      document.getElementById('lblClearSig').innerText = t.clearSig;
+      document.getElementById('btnPdf').innerText = t.btnPdf;
+      document.getElementById('btnShare').innerText = t.btnShare;
+      document.getElementById('btnSave').innerText = t.btnSave;
+      document.getElementById('lblHistoryTitle').innerText = t.historyTitle;
+      document.getElementById('lblRefresh').innerText = t.refresh;
+      document.getElementById('lblNoHistory').innerText = t.noHistory;
+
+      if (currentEstimate) {
+        renderEstimateUI();
+      }
+    }
+
     const SUPABASE_URL = ''; 
     const SUPABASE_ANON_KEY = ''; 
     
@@ -166,7 +278,6 @@
       canvas = document.getElementById('sigCanvas');
       if (canvas) {
         ctx = canvas.getContext('2d');
-        
         canvas.width = canvas.parentElement.clientWidth || 300;
         canvas.height = 100;
 
@@ -175,27 +286,14 @@
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
 
-        // Mouse Events
         canvas.addEventListener('mousedown', startDrawing);
         canvas.addEventListener('mousemove', draw);
         canvas.addEventListener('mouseup', stopDrawing);
         canvas.addEventListener('mouseleave', stopDrawing);
 
-        // Touch Events for Mobile / Tablets
-        canvas.addEventListener('touchstart', (e) => {
-          e.preventDefault();
-          startDrawing(e.touches[0]);
-        }, { passive: false });
-
-        canvas.addEventListener('touchmove', (e) => {
-          e.preventDefault();
-          draw(e.touches[0]);
-        }, { passive: false });
-
-        canvas.addEventListener('touchend', (e) => {
-          e.preventDefault();
-          stopDrawing();
-        });
+        canvas.addEventListener('touchstart', (e) => { e.preventDefault(); startDrawing(e.touches[0]); }, { passive: false });
+        canvas.addEventListener('touchmove', (e) => { e.preventDefault(); draw(e.touches[0]); }, { passive: false });
+        canvas.addEventListener('touchend', (e) => { e.preventDefault(); stopDrawing(); });
       }
     });
 
@@ -221,10 +319,7 @@
       ctx.stroke();
     }
 
-    function stopDrawing() {
-      isDrawing = false;
-    }
-
+    function stopDrawing() { isDrawing = false; }
     function clearSignature() {
       if (!ctx || !canvas) return;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -267,7 +362,7 @@
         recognition = new SpeechRecognition();
         recognition.continuous = true;
         recognition.interimResults = true;
-        recognition.lang = 'en-US';
+        recognition.lang = currentLang === 'es' ? 'es-ES' : 'en-US';
 
         recognition.onstart = () => {
           isRecording = true;
@@ -297,7 +392,7 @@
       const micBtn = document.getElementById("micBtn");
       if (micBtn) {
         micBtn.className = "bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold px-3 py-1.5 rounded-lg transition flex items-center space-x-1.5";
-        micBtn.innerHTML = "<span>🎙️ Voice Dictation</span>";
+        micBtn.innerHTML = `<span>🎙️ <span id="lblVoice">${translations[currentLang].voice}</span></span>`;
       }
     }
 
@@ -306,6 +401,7 @@
       const histTab = document.getElementById('historyTab');
       const genBtn = document.getElementById('tabGenBtn');
       const histBtn = document.getElementById('tabHistBtn');
+      const t = translations[currentLang];
 
       if (tab === 'generator') {
         genTab.classList.remove('hidden');
@@ -321,7 +417,7 @@
       }
     }
 
-    // --- GENERATE ESTIMATE ---
+    // --- GENERATE ESTIMATE WITH ORDER NUMBER ---
     function generateEstimate() {
       const input = document.getElementById("notesInput").value;
       const companyName = document.getElementById("companyNameInput").value || "ProBuild Services";
@@ -334,6 +430,9 @@
       const now = new Date();
       const formattedDate = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
       const formattedTime = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+      
+      // Unique sequential order number generation
+      const orderNumber = `JS-${now.getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
 
       const rawLines = input.split(/[\n,.]+/);
       const items = [];
@@ -347,11 +446,11 @@
         let cost = 150;
         let qty = 1;
 
-        if (text.includes("demo") || text.includes("demolish") || text.includes("remove")) {
+        if (text.includes("demo") || text.includes("demolish") || text.includes("remove") || text.includes("demoler")) {
           cost = 85; qty = 8;
-        } else if (text.includes("tile") || text.includes("floor") || text.includes("sq ft")) {
+        } else if (text.includes("tile") || text.includes("floor") || text.includes("sq ft") || text.includes("azulejo")) {
           cost = 14; qty = 50;
-        } else if (text.includes("plumb") || text.includes("vanity") || text.includes("pipe") || text.includes("sink")) {
+        } else if (text.includes("plumb") || text.includes("vanity") || text.includes("pipe") || text.includes("sink") || text.includes("tubería")) {
           cost = 450; qty = 1;
         }
 
@@ -366,12 +465,14 @@
       }
 
       currentEstimate = {
+        order_number: orderNumber,
         company_name: companyName,
         client_name: clientName,
         client_address: clientAddress,
         room_category: roomCategory,
         created_date: formattedDate,
         created_time: formattedTime,
+        language: currentLang,
         line_items: items,
         summary: { subtotal, grand_total: subtotal }
       };
@@ -379,9 +480,10 @@
       renderEstimateUI();
     }
 
-    // --- RENDER ESTIMATE & EDIT CONTROLS ---
+    // --- RENDER ESTIMATE UI ---
     function renderEstimateUI() {
       if (!currentEstimate) return;
+      const t = translations[currentLang];
 
       let subtotal = 0;
       currentEstimate.line_items.forEach(item => {
@@ -399,7 +501,10 @@
       let html = `
         <div class="border-b border-slate-800 pb-2 mb-3 flex justify-between items-start">
           <div>
-            <p class="text-amber-400 font-bold">${currentEstimate.company_name}</p>
+            <div class="flex items-center space-x-2">
+              <p class="text-amber-400 font-bold">${currentEstimate.company_name}</p>
+              <span class="bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[9px] px-1.5 py-0.5 rounded font-mono font-bold">${currentEstimate.order_number}</span>
+            </div>
             <p class="text-[10px] text-slate-400">Client: ${currentEstimate.client_name} (${currentEstimate.client_address})</p>
             <p class="text-[9px] text-amber-500 font-mono mt-0.5">Area: ${currentEstimate.room_category}</p>
           </div>
@@ -425,36 +530,34 @@
       });
 
       html += `<div class="pt-2 text-xs space-y-1 border-t border-slate-800 mt-3 text-slate-400">
-        <div class="flex justify-between"><span>Subtotal:</span><span>$${subtotal}</span></div>
-        <div class="flex justify-between"><span>Contingency (10%):</span><span>$${contingency}</span></div>
-        <div class="flex justify-between"><span>Est. Tax (8%):</span><span>$${tax}</span></div>
+        <div class="flex justify-between"><span>${t.subtotal}</span><span>$${subtotal}</span></div>
+        <div class="flex justify-between"><span>${t.contingency}</span><span>$${contingency}</span></div>
+        <div class="flex justify-between"><span>${t.tax}</span><span>$${tax}</span></div>
         <div class="flex justify-between font-bold text-slate-100 pt-1 border-t border-slate-900 text-sm">
-          <span>Grand Total:</span>
+          <span>${t.grandTotal}</span>
           <span class="text-amber-400">$${grand_total}</span>
         </div>
       </div>`;
 
-      // Photo Attachment Rendering
       if (currentSitePhoto) {
         html += `
           <div class="mt-3 pt-3 border-t border-slate-800">
-            <p class="text-[10px] text-slate-400 font-semibold mb-1">Site Inspection Photo:</p>
+            <p class="text-[10px] text-slate-400 font-semibold mb-1">${t.sitePhotoLabel}</p>
             <img src="${currentSitePhoto}" class="max-h-40 w-auto rounded border border-slate-800 object-contain">
           </div>
         `;
       }
 
-      // Terms & Signature Display
       const sigDataUrl = canvas ? canvas.toDataURL() : null;
       html += `
         <div class="mt-4 pt-3 border-t border-slate-800 text-[10px] text-slate-400 space-y-2">
-          <p class="font-semibold text-slate-300">Terms & Conditions:</p>
-          <p>Payment due upon completion. This estimate is valid for 30 days from issuance. Any unforeseen structural damage will be billed separately upon client approval.</p>
+          <p class="font-semibold text-slate-300">${t.termsTitle}</p>
+          <p>${t.termsText}</p>
           <div class="pt-3 grid grid-cols-2 gap-4 items-end">
-            <div><span class="text-[9px] text-slate-500 block border-b border-slate-700 pb-4">Contractor Signature</span></div>
+            <div><span class="text-[9px] text-slate-500 block border-b border-slate-700 pb-4">${t.contractorSig}</span></div>
             <div>
               ${canvas ? `<img src="${sigDataUrl}" class="h-10 border-b border-slate-700 pb-1">` : `<div class="border-b border-slate-700 pb-6"></div>`}
-              <span class="text-[9px] text-slate-500 block pt-1">Client Approval Signature</span>
+              <span class="text-[9px] text-slate-500 block pt-1">${t.clientSig}</span>
             </div>
           </div>
         </div>
@@ -476,7 +579,7 @@
       if (!currentEstimate) return;
       currentEstimate.line_items.push({
         category: currentEstimate.room_category || "General",
-        description: "New custom work item",
+        description: currentLang === 'es' ? "Nuevo ítem personalizado" : "New custom work item",
         quantity: 1,
         unit_cost: 150,
         total_cost: 150
@@ -490,7 +593,7 @@
       renderEstimateUI();
     }
 
-    // --- LOCAL STORAGE & DATABASE SAVE ---
+    // --- SAVE & HISTORY ---
     async function saveEstimate() {
       if (!currentEstimate) return;
 
@@ -507,7 +610,7 @@
         } catch (e) {}
       }
 
-      alert("Estimate successfully saved locally and to history!");
+      alert(currentLang === 'es' ? "¡Presupuesto guardado con éxito!" : "Estimate successfully saved!");
     }
 
     async function fetchHistory() {
@@ -527,49 +630,4 @@
       }
 
       if (allRecords.length > 0) {
-        let html = '';
-        allRecords.forEach(est => {
-          html += `<div class="bg-slate-950 p-3 rounded-lg border border-slate-800 flex justify-between items-center">
-            <div>
-              <p class="font-bold text-amber-400">${est.company_name} - ${est.client_name}</p>
-              <p class="text-[10px] text-slate-400">${est.client_address} (${est.room_category || 'General'})</p>
-              <p class="text-[9px] text-slate-500 mt-0.5">${est.created_date || ''} at ${est.created_time || ''}</p>
-            </div>
-            <span class="font-bold text-emerald-400">$${est.summary?.grand_total || 0}</span>
-          </div>`;
-        });
-        container.innerHTML = html;
-      } else {
-        container.innerHTML = `<p class="text-slate-500 italic">No saved estimates found yet. Generate and save one!</p>`;
-      }
-    }
-
-    function downloadPDF() {
-      const element = document.getElementById('outputContainer');
-      const opt = {
-        margin: 0.4,
-        filename: `JobSight_Proposal_${Date.now()}.pdf`,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2 },
-        jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
-      };
-      html2pdf().set(opt).from(element).save();
-    }
-
-    function shareProposal() {
-      if (!currentEstimate) return;
-      const textSummary = `*Estimate from ${currentEstimate.company_name}* (${currentEstimate.room_category})\nDate: ${currentEstimate.created_date}\nClient: ${currentEstimate.client_name}\nLocation: ${currentEstimate.client_address}\nGrand Total: $${currentEstimate.summary.grand_total}\n\nGenerated via JobSight AI.`;
-      
-      if (navigator.share) {
-        navigator.share({
-          title: 'JobSight Estimate',
-          text: textSummary,
-        }).catch(() => {});
-      } else {
-        navigator.clipboard.writeText(textSummary);
-        alert("Estimate summary copied to clipboard!");
-      }
-    }
-  </script>
-</body>
-</html>
+        let
