@@ -11,6 +11,11 @@
 
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+  <!-- Leaflet CSS & JS for Free Open-Source Interactive Maps -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
   <style>
     html {
@@ -47,24 +52,6 @@
     }
 
     canvas { touch-action: none; }
-
-    /* NATIVE PRINT STYLING: Automatically converts the page to a clean black-and-white document when printing/exporting PDF */
-    #printDocument { display: none; }
-
-    @media print {
-      body * { visibility: hidden; }
-      #printDocument, #printDocument * { visibility: visible; }
-      #printDocument {
-        display: block !important;
-        position: absolute;
-        left: 0;
-        top: 0;
-        width: 100%;
-        background: #ffffff !important;
-        color: #000000 !important;
-        padding: 20px;
-      }
-    }
   </style>
 </head>
 <body class="min-h-screen flex flex-col justify-between">
@@ -78,7 +65,7 @@
         </div>
         <div class="truncate">
           <h1 class="text-base font-bold text-amber-500 leading-tight">JobSight AI</h1>
-          <p id="subHeader" class="text-[11px] text-slate-400 truncate">Field Operations Engine</p>
+          <p id="subHeader" class="text-[11px] text-slate-400 truncate">Field Operations & Roofing Engine</p>
         </div>
       </div>
 
@@ -89,6 +76,7 @@
         </select>
         <div class="flex bg-slate-900 p-1 rounded-lg border border-slate-800">
           <button onclick="switchTab('generator')" id="tabGenBtn" class="bg-amber-500 text-slate-950 text-xs font-bold px-2.5 py-1 rounded-md">Gen</button>
+          <button onclick="switchTab('roof')" id="tabRoofBtn" class="text-slate-400 text-xs font-semibold px-2.5 py-1 rounded-md">Roof 📐</button>
           <button onclick="switchTab('history')" id="tabHistBtn" class="text-slate-400 text-xs font-semibold px-2.5 py-1 rounded-md">History</button>
         </div>
       </div>
@@ -131,7 +119,7 @@
               <option value="General & Whole House">General / Whole House</option>
               <option value="Kitchen Remodel">Kitchen / Cocina</option>
               <option value="Master Bathroom">Bathroom / Baño</option>
-              <option value="Exterior & Roofing">Exterior / Roofing</option>
+              <option value="Exterior & Roofing">Exterior & Roofing</option>
               <option value="Basement / Addition">Basement / Adición</option>
             </select>
           </div>
@@ -198,7 +186,7 @@
 
         <!-- Action Buttons -->
         <div class="grid grid-cols-1 gap-2.5 pt-1">
-          <button id="btnPdf" onclick="downloadPDF()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold py-3 rounded-xl text-xs">📄 Export PDF / Print</button>
+          <button id="btnPdf" onclick="downloadPDF()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold py-3 rounded-xl text-xs">📄 Export Direct PDF</button>
           <div class="grid grid-cols-2 gap-2">
             <button id="btnShare" onclick="shareProposal()" class="bg-sky-600 hover:bg-sky-500 text-white font-bold py-3 rounded-xl text-xs">📤 Share</button>
             <button id="btnSave" onclick="saveEstimate()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl text-xs">💾 Save Local</button>
@@ -208,7 +196,48 @@
 
     </div>
 
-    <!-- TAB 2: HISTORY -->
+    <!-- TAB 2: BIRD'S EYE ROOF MEASUREMENT -->
+    <div id="roofTab" class="hidden space-y-4">
+      <div class="bg-slate-900 p-4 rounded-2xl border border-slate-800 space-y-3 shadow-lg">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+          <div class="flex items-center space-x-2">
+            <span class="text-amber-500 font-mono text-xs font-bold">📐</span>
+            <h2 class="text-xs font-bold text-amber-400 uppercase tracking-wide">Bird's Eye Roof Measurer</h2>
+          </div>
+          <button onclick="resetRoofMeasurement()" class="text-xs text-rose-400 underline font-semibold">Reset Points</button>
+        </div>
+
+        <p class="text-[11px] text-slate-400">
+          Tap around the roof perimeter on the satellite map below to plot corners. Area calculates instantly.
+        </p>
+
+        <!-- Map Container -->
+        <div id="map" class="w-full h-80 rounded-xl border border-slate-800 z-10"></div>
+
+        <!-- Measurement Readout -->
+        <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2 text-xs">
+          <div class="flex justify-between">
+            <span class="text-slate-400">Measured Area:</span>
+            <span id="roofSqFtDisplay" class="font-bold text-amber-400">0 sq ft (0 Squares)</span>
+          </div>
+          <div>
+            <label class="text-[10px] text-slate-500 block mb-1">Roof Pitch Factor (Slope Multiplier)</label>
+            <select id="roofPitchSelect" onchange="updateRoofCalculation()" class="bg-slate-900 text-slate-200 text-xs py-1.5 px-2 rounded-lg border border-slate-800">
+              <option value="1.0">Low / Flat (1.0x)</option>
+              <option value="1.12" selected>Standard 4/12 - 6/12 (1.12x)</option>
+              <option value="1.25">Steep 8/12 - 10/12 (1.25x)</option>
+              <option value="1.40">Very Steep 12/12+ (1.40x)</option>
+            </select>
+          </div>
+
+          <button onclick="injectRoofIntoNotes()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 rounded-xl text-xs mt-2">
+            ➕ Add Measurement to Proposal Notes
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 3: HISTORY -->
     <div id="historyTab" class="hidden space-y-4">
       <div class="bg-slate-900 p-4 rounded-2xl border border-slate-800 space-y-3 shadow-lg">
         <div class="flex items-center justify-between border-b border-slate-800 pb-2">
@@ -223,18 +252,16 @@
 
   </main>
 
-  <!-- Dedicated Hidden Print Document Node -->
-  <div id="printDocument"></div>
-
   <footer class="border-t border-slate-900 bg-slate-950 py-3 text-center text-slate-600 text-[11px]">
-    <p>JobSight AI Field OS &bull; Mobile Optimized</p>
+    <p>JobSight AI Field OS &bull; Roofing & Operations Engine</p>
   </footer>
 
   <script>
     const translations = {
       en: {
-        subHeader: "Field Operations Engine",
+        subHeader: "Field Operations & Roofing Engine",
         tabGen: "Gen",
+        tabRoof: "Roof 📐",
         tabHist: "History",
         detailsTitle: "Proposal Details",
         company: "Company Name",
@@ -264,8 +291,9 @@
         sigPlaceholder: "Sign here with finger or stylus"
       },
       es: {
-        subHeader: "Motor de Operaciones",
+        subHeader: "Motor de Operaciones y Techado",
         tabGen: "Gen",
+        tabRoof: "Techo 📐",
         tabHist: "Historial",
         detailsTitle: "Detalles de Propuesta",
         company: "Nombre de la Empresa",
@@ -304,6 +332,7 @@
 
       document.getElementById('subHeader').innerText = t.subHeader;
       document.getElementById('tabGenBtn').innerText = t.tabGen;
+      document.getElementById('tabRoofBtn').innerText = t.tabRoof;
       document.getElementById('tabHistBtn').innerText = t.tabHist;
       document.getElementById('lblDetailsTitle').innerText = t.detailsTitle;
       document.getElementById('lblCompany').innerText = t.company;
@@ -340,82 +369,128 @@
     let recognition = null;
     let isRecording = false;
 
-    let canvas, ctx, isDrawing = false, hasSigned = false;
+    // Leaflet Map & Roofing Variables
+    let leafletMap = null;
+    let polygonLayer = null;
+    let latLngPoints = [];
+    let markerLayers = [];
+    let rawSquareMeters = 0;
 
-    function initSignaturePad() {
-      canvas = document.getElementById('sigCanvas');
-      if (!canvas) return;
-      ctx = canvas.getContext('2d');
-      resizeCanvas();
-      window.addEventListener('resize', resizeCanvas);
+    function initLeafletMap() {
+      if (leafletMap) return;
+      // Default to Austin, TX until address is geocoded or adjusted
+      leafletMap = L.map('map').setView([30.2672, -97.7431], 19);
 
-      canvas.addEventListener('mousedown', startDrawing);
-      canvas.addEventListener('mousemove', draw);
-      window.addEventListener('mouseup', stopDrawing);
+      // Add High-Resolution Esri World Imagery (Satellite Bird's Eye View)
+      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        attribution: 'Tiles &copy; Esri',
+        maxZoom: 20
+      }).addTo(leafletMap);
 
-      canvas.addEventListener('touchstart', (e) => { e.preventDefault(); startDrawing(e.touches[0]); }, { passive: false });
-      canvas.addEventListener('touchmove', (e) => { e.preventDefault(); draw(e.touches[0]); }, { passive: false });
-      canvas.addEventListener('touchend', stopDrawing);
+      leafletMap.on('click', (e) => {
+        addRoofPoint(e.latlng);
+      });
     }
 
-    function resizeCanvas() {
-      if (!canvas || !canvas.parentElement) return;
-      const rect = canvas.parentElement.getBoundingClientRect();
-      const tempImg = hasSigned ? canvas.toDataURL() : null;
+    function geocodeAndCenterMap() {
+      const address = document.getElementById("clientAddressInput").value;
+      if (!address) return;
+      
+      // Use free Nominatim OpenStreetMap Geocoder
+      fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}`)
+        .then(response => response.json())
+        .then(data => {
+          if (data && data.length > 0) {
+            const lat = parseFloat(data[0].lat);
+            const lon = parseFloat(data[0].lon);
+            if (leafletMap) {
+              leafletMap.setView([lat, lon], 19);
+            }
+          }
+        }).catch(() => {});
+    }
 
-      canvas.width = rect.width || 300;
-      canvas.height = 110;
+    function addRoofPoint(latlng) {
+      latLngPoints.push(latlng);
+      
+      const marker = L.circleMarker(latlng, {
+        radius: 6,
+        color: '#ffffff',
+        fillColor: '#fbbf24',
+        fillOpacity: 1,
+        weight: 2
+      }).addTo(leafletMap);
+      markerLayers.push(marker);
 
-      ctx.strokeStyle = '#020617';
-      ctx.lineWidth = 3.0;
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
+      if (polygonLayer) {
+        leafletMap.removeLayer(polygonLayer);
+      }
 
-      if (tempImg) {
-        const img = new Image();
-        img.onload = () => ctx.drawImage(img, 0, 0);
-        img.src = tempImg;
+      if (latLngPoints.length >= 3) {
+        polygonLayer = L.polygon(latLngPoints, {
+          color: '#fbbf24',
+          weight: 2,
+          fillColor: '#fbbf24',
+          fillOpacity: 0.4
+        }).addTo(leafletMap);
+
+        rawSquareMeters = calculatePolygonArea(latLngPoints);
+        updateRoofCalculation();
       }
     }
 
-    function getCanvasCoordinates(e) {
-      const rect = canvas.getBoundingClientRect();
-      return {
-        x: (e.clientX - rect.left) * (canvas.width / rect.width),
-        y: (e.clientY - rect.top) * (canvas.height / rect.height)
-      };
+    // Shoelace formula for spherical/planar polygon area approximation in square meters
+    function calculatePolygonArea(latlngs) {
+      if (latlngs.length < 3) return 0;
+      let total = 0;
+      const earthRadius = 6378137; // meters
+      for (let i = 0; i < latlngs.length; i++) {
+        const p1 = latlngs[i];
+        const p2 = latlngs[(i + 1) % latLngs.length];
+        const lon1 = p1.lng * Math.PI / 180;
+        const lon2 = p2.lng * Math.PI / 180;
+        const lat1 = p1.lat * Math.PI / 180;
+        const lat2 = p2.lat * Math.PI / 180;
+        total += (lon2 - lon1) * (2 + Math.sin(lat1) + Math.sin(lat2));
+      }
+      total = total * earthRadius * earthRadius / 2.0;
+      return Math.abs(total);
     }
 
-    function startDrawing(e) {
-      isDrawing = true;
-      hasSigned = true;
-      document.getElementById('sigPlaceholder')?.classList.add('hidden');
-      const pos = getCanvasCoordinates(e);
-      ctx.beginPath();
-      ctx.moveTo(pos.x, pos.y);
+    function updateRoofCalculation() {
+      const sqFtFromMeters = rawSquareMeters * 10.7639;
+      const pitchMultiplier = parseFloat(document.getElementById("roofPitchSelect").value) || 1.12;
+      const totalSqFt = Math.round(sqFtFromMeters * pitchMultiplier);
+      const squares = (totalSqFt / 100).toFixed(1);
+
+      document.getElementById("roofSqFtDisplay").innerText = `${totalSqFt.toLocaleString()} sq ft (${squares} Squares)`;
     }
 
-    function draw(e) {
-      if (!isDrawing) return;
-      const pos = getCanvasCoordinates(e);
-      ctx.lineTo(pos.x, pos.y);
-      ctx.stroke();
+    function resetRoofMeasurement() {
+      latLngPoints = [];
+      if (polygonLayer) leafletMap.removeLayer(polygonLayer);
+      markerLayers.forEach(m => leafletMap.removeLayer(m));
+      markerLayers = [];
+      rawSquareMeters = 0;
+      document.getElementById("roofSqFtDisplay").innerText = "0 sq ft (0 Squares)";
     }
 
-    function stopDrawing() {
-      isDrawing = false;
-      if (currentEstimate) renderEstimateUI();
+    function injectRoofIntoNotes() {
+      const pitchMultiplier = parseFloat(document.getElementById("roofPitchSelect").value) || 1.12;
+      const sqFtFromMeters = rawSquareMeters * 10.7639;
+      const totalSqFt = Math.round(sqFtFromMeters * pitchMultiplier);
+      const squares = (totalSqFt / 100).toFixed(1);
+
+      const notes = document.getElementById("notesInput");
+      notes.value = notes.value + (notes.value ? '\n' : '') + `Roof Measurement: ${totalSqFt.toLocaleString()} sq ft (${squares} Squares incl. pitch factor). Tear off and install architectural shingles.`;
+      
+      switchTab('generator');
+      alert("Roof measurement added to proposal notes!");
     }
 
-    function clearSignature() {
-      if (!ctx || !canvas) return;
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      hasSigned = false;
-      document.getElementById('sigPlaceholder')?.classList.remove('hidden');
-      if (currentEstimate) renderEstimateUI();
-    }
-
-    window.addEventListener('DOMContentLoaded', () => { initSignaturePad(); });
+    window.addEventListener('DOMContentLoaded', () => {
+      initSignaturePad();
+    });
 
     function handlePhotoUpload(event) {
       const file = event.target.files[0];
@@ -483,20 +558,33 @@
 
     function switchTab(tab) {
       const genTab = document.getElementById('generatorTab');
+      const roofTab = document.getElementById('roofTab');
       const histTab = document.getElementById('historyTab');
       const genBtn = document.getElementById('tabGenBtn');
+      const roofBtn = document.getElementById('tabRoofBtn');
       const histBtn = document.getElementById('tabHistBtn');
+
+      genTab.classList.add('hidden');
+      roofTab.classList.add('hidden');
+      histTab.classList.add('hidden');
+      genBtn.className = "text-slate-400 text-xs font-semibold px-2.5 py-1 rounded-md";
+      roofBtn.className = "text-slate-400 text-xs font-semibold px-2.5 py-1 rounded-md";
+      histBtn.className = "text-slate-400 text-xs font-semibold px-2.5 py-1 rounded-md";
 
       if (tab === 'generator') {
         genTab.classList.remove('hidden');
-        histTab.classList.add('hidden');
         genBtn.className = "bg-amber-500 text-slate-950 text-xs font-bold px-2.5 py-1 rounded-md";
-        histBtn.className = "text-slate-400 text-xs font-semibold px-2.5 py-1 rounded-md";
+      } else if (tab === 'roof') {
+        roofTab.classList.remove('hidden');
+        roofBtn.className = "bg-amber-500 text-slate-950 text-xs font-bold px-2.5 py-1 rounded-md";
+        setTimeout(() => {
+          initLeafletMap();
+          leafletMap.invalidateSize();
+          geocodeAndCenterMap();
+        }, 150);
       } else {
-        genTab.classList.add('hidden');
         histTab.classList.remove('hidden');
         histBtn.className = "bg-amber-500 text-slate-950 text-xs font-bold px-2.5 py-1 rounded-md";
-        genBtn.className = "text-slate-400 text-xs font-semibold px-2.5 py-1 rounded-md";
         fetchHistory();
       }
     }
@@ -529,8 +617,8 @@
 
         if (text.includes("demo") || text.includes("demolish") || text.includes("remove") || text.includes("demoler")) {
           cost = 85; qty = 8;
-        } else if (text.includes("tile") || text.includes("floor") || text.includes("sq ft") || text.includes("azulejo")) {
-          cost = 14; qty = 50;
+        } else if (text.includes("tile") || text.includes("floor") || text.includes("sq ft") || text.includes("azulejo") || text.includes("roof") || text.includes("squares") || text.includes("measurement")) {
+          cost = 350; qty = 10;
         } else if (text.includes("plumb") || text.includes("vanity") || text.includes("pipe") || text.includes("sink") || text.includes("tubería")) {
           cost = 450; qty = 1;
         }
@@ -721,79 +809,87 @@
 
     function downloadPDF() {
       if (!currentEstimate) return;
-      
-      const printDoc = document.getElementById('printDocument');
-      let itemsHtml = '';
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({ unit: 'pt', format: 'letter' });
+
+      let y = 40;
+      doc.setFont("Helvetica", "bold");
+      doc.setFontSize(18);
+      doc.text(currentEstimate.company_name, 40, y);
+
+      doc.setFontSize(10);
+      doc.setFont("Helvetica", "normal");
+      doc.text(`Order: ${currentEstimate.order_number}`, 40, y + 15);
+      doc.text(`Date: ${currentEstimate.created_date}`, 40, y + 27);
+
+      doc.setFont("Helvetica", "bold");
+      doc.text(`Client: ${currentEstimate.client_name}`, 400, y);
+      doc.setFont("Helvetica", "normal");
+      doc.text(currentEstimate.client_address, 400, y + 15);
+
+      y += 50;
+      doc.setLineWidth(1);
+      doc.line(40, y, 572, y);
+
+      y += 20;
+      doc.setFont("Helvetica", "bold");
+      doc.setFontSize(12);
+      doc.text("ITEMIZED ESTIMATE", 40, y);
+
+      y += 15;
+      doc.setFillColor(241, 245, 249);
+      doc.rect(40, y, 532, 22, "F");
+      doc.text("Description", 48, y + 15);
+      doc.text("Total", 500, y + 15);
+
+      y += 25;
+      doc.setFont("Helvetica", "normal");
+      doc.setFontSize(10);
+
+      currentEstimate.line_items.forEach(item => {
+        doc.text(`[${item.category}] ${item.description}`, 48, y);
+        doc.text(`$${item.total_cost}`, 500, y);
+        y += 20;
+        doc.setLineWidth(0.5);
+        doc.setStrokeColor(226, 232, 240);
+        doc.line(40, y - 5, 572, y - 5);
+      });
+
+      y += 10;
       let subtotal = currentEstimate.summary.subtotal || 0;
       let contingency = currentEstimate.summary.estimated_contingency || 0;
       let tax = currentEstimate.summary.tax || 0;
       let grandTotal = currentEstimate.summary.grand_total || 0;
 
-      currentEstimate.line_items.forEach(item => {
-        itemsHtml += `
-          <tr style="border-bottom: 1px solid #cbd5e1;">
-            <td style="padding: 12px; color: #000000;">[${item.category}] ${item.description}</td>
-            <td style="padding: 12px; text-align: right; color: #000000; font-weight: bold;">$${item.total_cost}</td>
-          </tr>
-        `;
-      });
+      doc.text(`Subtotal: $${subtotal}`, 420, y); y += 16;
+      doc.text(`Contingency (10%): $${contingency}`, 420, y); y += 16;
+      doc.text(`Est. Tax (8%): $${tax}`, 420, y); y += 20;
 
-      const sigDataUrl = (canvas && hasSigned) ? canvas.toDataURL() : '';
+      doc.setFont("Helvetica", "bold");
+      doc.setFontSize(12);
+      doc.text(`Grand Total: $${grandTotal}`, 380, y);
 
-      printDoc.innerHTML = `
-        <div style="font-family: Arial, sans-serif; font-size: 14px; max-width: 750px; margin: 0 auto; background: #ffffff; color: #000000; padding: 20px;">
-          <div style="display: flex; justify-content: space-between; border-bottom: 2px solid #0f172a; padding-bottom: 15px; margin-bottom: 25px;">
-            <div>
-              <h2 style="margin: 0; color: #0f172a; font-size: 22px;">${currentEstimate.company_name}</h2>
-              <p style="margin: 5px 0 0 0; color: #475569; font-size: 12px;">Order: <strong>${currentEstimate.order_number}</strong> | Date: ${currentEstimate.created_date}</p>
-            </div>
-            <div style="text-align: right;">
-              <p style="margin: 0; color: #0f172a; font-size: 15px;"><strong>Client:</strong> ${currentEstimate.client_name}</p>
-              <p style="margin: 5px 0 0 0; color: #475569; font-size: 12px;">${currentEstimate.client_address}</p>
-            </div>
-          </div>
+      y += 35;
+      doc.setFont("Helvetica", "bold");
+      doc.setFontSize(10);
+      doc.text("Terms & Conditions:", 40, y);
+      doc.setFont("Helvetica", "normal");
+      doc.setFontSize(8);
+      doc.text("Payment due upon completion. Valid for 30 days.", 40, y + 12);
 
-          <h3 style="color: #0f172a; font-size: 15px; text-transform: uppercase; margin-bottom: 12px;">Itemized Estimate</h3>
-          <table style="width: 100%; border-collapse: collapse; margin-bottom: 25px;">
-            <thead>
-              <tr style="background-color: #f1f5f9; border-bottom: 2px solid #94a3b8;">
-                <th style="padding: 12px; text-align: left; color: #0f172a;">Description</th>
-                <th style="padding: 12px; text-align: right; color: #0f172a;">Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${itemsHtml}
-            </tbody>
-          </table>
+      if (canvas && hasSigned) {
+        const sigData = canvas.toDataURL("image/png");
+        doc.addImage(sigData, 'PNG', 400, y - 10, 140, 45);
+      }
 
-          <div style="width: 280px; margin-left: auto; margin-bottom: 30px; font-size: 14px;">
-            <div style="display: flex; justify-content: space-between; padding: 6px 0; color: #334155;"><span>Subtotal:</span> <span>$${subtotal}</span></div>
-            <div style="display: flex; justify-content: space-between; padding: 6px 0; color: #334155;"><span>Contingency (10%):</span> <span>$${contingency}</span></div>
-            <div style="display: flex; justify-content: space-between; padding: 6px 0; color: #334155;"><span>Est. Tax (8%):</span> <span>$${tax}</span></div>
-            <div style="display: flex; justify-content: space-between; padding: 10px 0; border-top: 2px solid #0f172a; font-weight: bold; color: #0f172a; font-size: 16px;">
-              <span>Grand Total:</span> <span>$${grandTotal}</span>
-            </div>
-          </div>
+      doc.setFont("Helvetica", "bold");
+      doc.text("Contractor Signature", 40, y + 55);
+      doc.line(40, y + 45, 180, y + 45);
 
-          ${currentSitePhoto ? `<div style="margin-bottom: 25px;"><p style="font-weight: bold; color: #0f172a; margin-bottom: 8px;">Site Inspection Photo:</p><img src="${currentSitePhoto}" style="max-height: 200px; border-radius: 6px; border: 1px solid #cbd5e1;" /></div>` : ''}
+      doc.text("Client Approval Signature", 400, y + 55);
+      doc.line(400, y + 45, 540, y + 45);
 
-          <div style="border-top: 1px solid #cbd5e1; padding-top: 20px; margin-top: 25px; color: #475569; font-size: 11px;">
-            <p style="font-weight: bold; color: #0f172a; margin-bottom: 6px;">Terms & Conditions:</p>
-            <p style="margin: 0; line-height: 1.5;">Payment due upon completion. This estimate is valid for 30 days from issuance. Any unforeseen structural damage will be billed separately upon client approval.</p>
-            
-            <div style="display: flex; justify-content: space-between; margin-top: 40px; align-items: flex-end;">
-              <div style="width: 45%; border-top: 1px solid #0f172a; padding-top: 8px; color: #0f172a; font-weight: bold;">Contractor Signature</div>
-              <div style="width: 45%;">
-                ${sigDataUrl ? `<img src="${sigDataUrl}" style="height: 50px; display: block; margin-bottom: 4px;" />` : `<div style="height: 50px;"></div>`}
-                <div style="border-top: 1px solid #0f172a; padding-top: 8px; color: #0f172a; font-weight: bold;">Client Approval Signature</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      `;
-
-      // Trigger the browser's native print / save as PDF dialog, which works on every phone and PC
-      window.print();
+      doc.save(`JobSight_${currentEstimate.order_number}.pdf`);
     }
 
     function shareProposal() {
