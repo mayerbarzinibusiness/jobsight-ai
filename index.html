@@ -11,7 +11,7 @@
 
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <!-- html2pdf Library for 100% Reliable Direct PDF Downloads -->
+  <!-- html2pdf Library -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
   <!-- Leaflet CSS & JS for Free Open-Source Satellite Maps -->
@@ -196,10 +196,10 @@
           <button id="btnAddItem" onclick="addNewLineItem()" class="bg-slate-800 text-amber-400 text-xs font-bold px-2.5 py-1 rounded-lg">+ Item</button>
         </div>
 
-        <!-- This container is what gets converted directly into a PDF -->
-        <div id="pdfExportContainer" class="space-y-3 text-xs bg-slate-950 p-4 rounded-xl border border-slate-800">
-          <div id="outputContainer" class="space-y-3"></div>
-        </div>
+        <div id="outputContainer" class="space-y-3 text-xs bg-slate-950 p-4 rounded-xl border border-slate-800"></div>
+
+        <!-- Hidden Off-Screen Container Rendered Specially for PDF Export -->
+        <div id="pdfExportContainer" style="position: absolute; left: -9999px; top: 0; width: 700px; background: #ffffff; color: #0f172a; padding: 30px; font-family: Helvetica, Arial, sans-serif;"></div>
 
         <!-- Payment Processing Box -->
         <div class="bg-slate-950 p-3.5 rounded-xl border border-slate-800 space-y-3">
@@ -860,6 +860,7 @@
       document.getElementById("outputWrapper").classList.remove("hidden");
       const container = document.getElementById("outputContainer");
 
+      // 1. Render App UI (Dark Mode)
       let html = `
         <div class="border-b border-slate-800 pb-2.5 mb-3 flex justify-between items-start gap-2">
           <div>
@@ -940,6 +941,93 @@
 
       container.innerHTML = html;
       document.getElementById("remainingBalanceDisplay").innerText = `$${remainingBalance.toFixed(2)}`;
+
+      // 2. Render Dedicated Clean PDF Export HTML Container
+      const pdfContainer = document.getElementById("pdfExportContainer");
+      let pdfHtml = `
+        <div style="display: flex; justify-content: space-between; border-bottom: 2px solid #0f172a; padding-bottom: 12px; margin-bottom: 15px;">
+          <div>
+            <h2 style="font-size: 18px; font-weight: bold; color: #0f172a; margin: 0;">${currentEstimate.company_name}</h2>
+            <p style="font-size: 11px; color: #475569; margin: 4px 0 0 0;">Order: <strong>${currentEstimate.order_number}</strong> &bull; ${currentEstimate.created_date} at ${currentEstimate.created_time}</p>
+          </div>
+          <div style="text-align: right;">
+            <p style="font-size: 11px; color: #475569; margin: 0;">Client: <strong>${currentEstimate.client_name}</strong><br>${currentEstimate.client_address}</p>
+          </div>
+        </div>
+        <div style="font-size: 12px; font-weight: bold; color: #0f172a; margin-bottom: 10px; text-transform: uppercase;">Itemized Proposal & Summary</div>
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 15px;">
+          <thead>
+            <tr style="background: #f1f5f9; border-bottom: 1px solid #cbd5e1;">
+              <th style="padding: 6px; text-align: left; font-size: 11px; color: #334155;">Description</th>
+              <th style="padding: 6px; text-align: right; font-size: 11px; color: #334155;">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+
+      currentEstimate.line_items.forEach(item => {
+        pdfHtml += `
+          <tr style="border-bottom: 1px solid #e2e8f0;">
+            <td style="padding: 8px; font-size: 11px; color: #1e293b;"><span style="color: #d97706; font-family: monospace;">[${item.category}]</span> ${item.description}</td>
+            <td style="padding: 8px; text-align: right; font-size: 11px; font-weight: bold; color: #1e293b;">$${item.total_cost}</td>
+          </tr>
+        `;
+      });
+
+      if (extraCost > 0) {
+        pdfHtml += `
+          <tr style="border-bottom: 1px solid #e2e8f0; background: #fffbeb;">
+            <td style="padding: 8px; font-size: 11px; color: #b45309;">[Extra / Unforeseen] ${currentEstimate.extra_desc}</td>
+            <td style="padding: 8px; text-align: right; font-size: 11px; font-weight: bold; color: #b45309;">$${extraCost}</td>
+          </tr>
+        `;
+      }
+
+      pdfHtml += `
+          </tbody>
+        </table>
+        
+        <div style="width: 260px; margin-left: auto; font-size: 11px; color: #334155; margin-bottom: 20px;">
+          <div style="display: flex; justify-content: space-between; padding: 3px 0;"><span>${t.subtotal}</span><span>$${adjustedSubtotal.toFixed(2)}</span></div>
+          <div style="display: flex; justify-content: space-between; padding: 3px 0;"><span>${t.tax}</span><span>$${tax.toFixed(2)}</span></div>
+          <div style="display: flex; justify-content: space-between; font-weight: bold; color: #0f172a; font-size: 13px; padding-top: 5px; border-top: 1px solid #cbd5e1;">
+            <span>${t.grandTotal}</span>
+            <span>$${grand_total.toFixed(2)}</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; color: #059669; padding-top: 4px;">
+            <span>Amount Paid (${currentEstimate.payment_method}):</span>
+            <span>-$${amountPaid.toFixed(2)}</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; font-weight: bold; color: #dc2626; padding-top: 4px; border-top: 1px solid #cbd5e1;">
+            <span>Remaining Balance Due:</span>
+            <span>$${remainingBalance.toFixed(2)}</span>
+          </div>
+        </div>
+      `;
+
+      if (currentSitePhoto) {
+        pdfHtml += `
+          <div style="margin-top: 15px; padding-top: 10px; border-top: 1px solid #e2e8f0;">
+            <p style="font-size: 10px; color: #64748b; margin-bottom: 5px;">${t.sitePhotoLabel}</p>
+            <img src="${currentSitePhoto}" style="max-height: 120px; width: auto; border-radius: 6px; border: 1px solid #cbd5e1;">
+          </div>
+        `;
+      }
+
+      pdfHtml += `
+        <div style="margin-top: 20px; padding-top: 10px; border-top: 1px solid #cbd5e1; font-size: 10px; color: #475569;">
+          <strong>${t.termsTitle}</strong> ${t.termsText}
+          <div style="display: flex; justify-content: space-between; margin-top: 35px; align-items: flex-end;">
+            <div style="width: 180px; border-bottom: 1px solid #94a3b8; padding-bottom: 30px;"><span style="font-size: 9px; color: #64748b;">${t.contractorSig}</span></div>
+            <div style="width: 180px; text-align: right;">
+              ${sigDataUrl ? `<img src="${sigDataUrl}" style="height: 35px; display: block; margin-left: auto; margin-bottom: 2px;">` : `<div style="height: 35px;"></div>`}
+              <div style="border-bottom: 1px solid #94a3b8; padding-top: 2px;"><span style="font-size: 9px; color: #64748b;">${t.clientSig}</span></div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      pdfContainer.innerHTML = pdfHtml;
     }
 
     function updatePaymentUI() {
@@ -1084,15 +1172,16 @@
       fetchHistory();
     }
 
-    // Direct html2pdf Engine
+    // Direct html2pdf Engine using the clean off-screen PDF container template
     function downloadPDF() {
       if (!currentEstimate) return;
       const element = document.getElementById('pdfExportContainer');
+
       const opt = {
         margin:       10,
         filename:     `JobSight_${currentEstimate.order_number}.pdf`,
         image:        { type: 'jpeg', quality: 0.98 },
-        html2canvas:  { scale: 2, useCORS: true },
+        html2canvas:  { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
         jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
       };
 
