@@ -159,50 +159,72 @@
     let recognition = null;
     let isRecording = false;
 
-    // --- SIGNATURE PAD LOGIC ---
+    // --- ROBUST SIGNATURE PAD LOGIC ---
     let canvas, ctx, isDrawing = false;
 
     window.addEventListener('DOMContentLoaded', () => {
       canvas = document.getElementById('sigCanvas');
       if (canvas) {
         ctx = canvas.getContext('2d');
-        resizeCanvas();
+        
+        canvas.width = canvas.parentElement.clientWidth || 300;
+        canvas.height = 100;
 
-        canvas.addEventListener('mousedown', startDraw);
+        ctx.strokeStyle = '#020617';
+        ctx.lineWidth = 2.5;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+
+        // Mouse Events
+        canvas.addEventListener('mousedown', startDrawing);
         canvas.addEventListener('mousemove', draw);
-        canvas.addEventListener('mouseup', stopDraw);
-        canvas.addEventListener('mouseleave', stopDraw);
+        canvas.addEventListener('mouseup', stopDrawing);
+        canvas.addEventListener('mouseleave', stopDrawing);
 
-        canvas.addEventListener('touchstart', (e) => { e.preventDefault(); startDraw(e.touches[0]); });
-        canvas.addEventListener('touchmove', (e) => { e.preventDefault(); draw(e.touches[0]); });
-        canvas.addEventListener('touchend', stopDraw);
+        // Touch Events for Mobile / Tablets
+        canvas.addEventListener('touchstart', (e) => {
+          e.preventDefault();
+          startDrawing(e.touches[0]);
+        }, { passive: false });
+
+        canvas.addEventListener('touchmove', (e) => {
+          e.preventDefault();
+          draw(e.touches[0]);
+        }, { passive: false });
+
+        canvas.addEventListener('touchend', (e) => {
+          e.preventDefault();
+          stopDrawing();
+        });
       }
     });
 
-    function resizeCanvas() {
-      if (!canvas) return;
-      canvas.width = canvas.parentElement.clientWidth;
-      canvas.height = 100;
-      ctx.strokeStyle = '#020617';
-      ctx.lineWidth = 2;
-      ctx.lineCap = 'round';
+    function getPosition(e, canvasElement) {
+      const rect = canvasElement.getBoundingClientRect();
+      return {
+        x: (e.clientX - rect.left) * (canvasElement.width / rect.width),
+        y: (e.clientY - rect.top) * (canvasElement.height / rect.height)
+      };
     }
 
-    function startDraw(e) {
+    function startDrawing(e) {
       isDrawing = true;
-      const rect = canvas.getBoundingClientRect();
+      const pos = getPosition(e, canvas);
       ctx.beginPath();
-      ctx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
+      ctx.moveTo(pos.x, pos.y);
     }
 
     function draw(e) {
       if (!isDrawing) return;
-      const rect = canvas.getBoundingClientRect();
-      ctx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
+      const pos = getPosition(e, canvas);
+      ctx.lineTo(pos.x, pos.y);
       ctx.stroke();
     }
 
-    function stopDraw() { isDrawing = false; }
+    function stopDrawing() {
+      isDrawing = false;
+    }
+
     function clearSignature() {
       if (!ctx || !canvas) return;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -431,7 +453,7 @@
           <div class="pt-3 grid grid-cols-2 gap-4 items-end">
             <div><span class="text-[9px] text-slate-500 block border-b border-slate-700 pb-4">Contractor Signature</span></div>
             <div>
-              ${canvas ? `<img src="${canvas.toDataURL()}" class="h-10 border-b border-slate-700 pb-1">` : `<div class="border-b border-slate-700 pb-6"></div>`}
+              ${canvas ? `<img src="${sigDataUrl}" class="h-10 border-b border-slate-700 pb-1">` : `<div class="border-b border-slate-700 pb-6"></div>`}
               <span class="text-[9px] text-slate-500 block pt-1">Client Approval Signature</span>
             </div>
           </div>
@@ -475,12 +497,10 @@
       const sigImage = canvas ? canvas.toDataURL() : null;
       const record = { ...currentEstimate, site_photo: currentSitePhoto, client_signature: sigImage, timestamp: Date.now() };
 
-      // 1. Save to LocalStorage (Instant offline access)
       let localHistory = JSON.parse(localStorage.getItem('jobsight_estimates') || '[]');
       localHistory.unshift(record);
       localStorage.setItem('jobsight_estimates', JSON.stringify(localHistory));
 
-      // 2. Save to Supabase if keys configured
       if (supabaseClient) {
         try {
           await supabaseClient.from('estimates').insert([{ estimate_data: record }]);
@@ -494,11 +514,9 @@
       const container = document.getElementById("historyContainer");
       let allRecords = [];
 
-      // Fetch Local Storage
       const localHistory = JSON.parse(localStorage.getItem('jobsight_estimates') || '[]');
       allRecords = [...localHistory];
 
-      // Fetch Cloud if available
       if (supabaseClient) {
         try {
           const { data } = await supabaseClient.from('estimates').select('*').order('created_at', { ascending: false });
