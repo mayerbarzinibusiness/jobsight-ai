@@ -11,6 +11,7 @@
 
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- Robust jsPDF UMD Build -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
   <!-- Leaflet CSS & JS for Free Open-Source Satellite Maps -->
@@ -1082,7 +1083,14 @@
 
     function downloadPDF() {
       if (!currentEstimate) return;
-      const { jsPDF } = window.jspdf;
+      
+      // Ensure jsPDF is loaded correctly
+      const { jsPDF } = window.jspdf || window.jsPDF;
+      if (!jsPDF) {
+        alert("PDF generator library is loading. Please try again in 2 seconds.");
+        return;
+      }
+
       const doc = new jsPDF({ unit: 'pt', format: 'letter' });
 
       let y = 40;
