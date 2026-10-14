@@ -1,342 +1,573 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="h-full">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>JobSight AI - Field OS</title>
-  
-  <!-- Progressive Web App (PWA) Tags -->
-  <link rel="manifest" href="manifest.json">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>JobSight AI - Field Contractor SaaS App</title>
 
+  <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Supabase JS SDK -->
+  <!-- Supabase JS Client -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <!-- html2pdf for client proposals -->
+  <!-- html2pdf.js for client side PDF conversion -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-</head>
-<body class="bg-slate-950 text-slate-100 min-h-screen font-sans pb-12">
-  
-  <div class="max-w-md md:max-w-4xl mx-auto p-4 space-y-6">
-    
-    <!-- Header -->
-    <header class="flex justify-between items-center border-b border-slate-800 pb-4 pt-2">
-      <div>
-        <h1 class="text-xl font-bold text-amber-500">JobSight AI</h1>
-        <p id="subHeader" class="text-xs text-slate-400">Field Operations & Estimate Engine</p>
-      </div>
-      <div class="flex items-center space-x-2">
-        <!-- Language Selector -->
-        <select id="langSelect" onchange="switchLanguage(this.value)" class="bg-slate-900 border border-slate-800 text-amber-400 text-xs font-semibold px-2 py-1.5 rounded-lg focus:outline-none">
-          <option value="en">🇺🇸 EN</option>
-          <option value="es">🇪🇸 ES</option>
-        </select>
-        <button onclick="switchTab('generator')" id="tabGenBtn" class="bg-amber-500 text-slate-950 text-xs font-bold px-3 py-1.5 rounded-lg transition">Generator</button>
-        <button onclick="switchTab('history')" id="tabHistBtn" class="bg-slate-800 text-slate-300 text-xs font-semibold px-3 py-1.5 rounded-lg transition">History</button>
-      </div>
-    </header>
 
-    <!-- TAB 1: GENERATOR -->
-    <div id="generatorTab" class="space-y-4">
-      
-      <!-- Job & Branding Details Panel -->
-      <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 space-y-3">
-        <h2 id="lblDetailsTitle" class="text-sm font-semibold text-amber-400">1. Proposal & Branding Details</h2>
-        <div class="grid grid-cols-2 gap-2">
-          <div>
-            <label id="lblCompany" class="text-[10px] text-slate-400 block mb-1">Contractor / Company Name</label>
-            <input type="text" id="companyNameInput" value="ProBuild Services" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-slate-200 focus:outline-none focus:border-amber-500">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#fffbebe6',
+              400: '#fbbf24',
+              500: '#f59e0b',
+              600: '#d97706',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* Custom scrollbar & canvas optimization */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0f172a;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 4px;
+    }
+    canvas {
+      touch-action: none;
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col font-sans antialiased selection:bg-amber-500 selection:text-slate-950">
+
+  <!-- Top Navigation Header -->
+  <header class="bg-slate-900/90 border-b border-slate-800 sticky top-0 z-50 backdrop-blur-md">
+    <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="w-9 h-9 rounded-xl bg-amber-500 flex items-center justify-center font-black text-slate-950 text-lg shadow-lg shadow-amber-500/20">
+          JS
+        </div>
+        <div>
+          <div class="flex items-center space-x-2">
+            <h1 class="text-lg font-bold text-slate-100 tracking-tight leading-none">JobSight AI</h1>
+            <span class="bg-amber-500/10 border border-amber-500/30 text-amber-400 text-[10px] font-semibold px-2 py-0.5 rounded-full uppercase">SaaS v2.5</span>
           </div>
+          <p id="uiSubHeader" class="text-xs text-slate-400 mt-0.5">Field Operations & Estimate Engine</p>
+        </div>
+      </div>
+
+      <div class="flex items-center space-x-2 sm:space-x-3">
+        <!-- Language Switcher -->
+        <div class="relative inline-block text-left">
+          <select id="languageSelect" onchange="changeLanguage(this.value)" class="bg-slate-950 border border-slate-800 text-amber-400 font-semibold text-xs rounded-lg px-2.5 py-1.5 focus:ring-2 focus:ring-amber-500 focus:outline-none cursor-pointer">
+            <option value="en">🇺🇸 EN</option>
+            <option value="es">🇪🇸 ES</option>
+          </select>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <nav class="flex bg-slate-950 p-1 rounded-lg border border-slate-800">
+          <button id="navTabGen" onclick="switchTab('generator')" class="px-3 py-1 text-xs font-semibold rounded-md bg-amber-500 text-slate-950 transition-all shadow">
+            <span id="uiNavGen">Generator</span>
+          </button>
+          <button id="navTabHist" onclick="switchTab('history')" class="px-3 py-1 text-xs font-semibold rounded-md text-slate-400 hover:text-slate-200 transition-all">
+            <span id="uiNavHist">History</span>
+          </button>
+        </nav>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Work Area -->
+  <main class="flex-1 max-w-5xl w-full mx-auto p-4 md:p-6 space-y-6">
+
+    <!-- Toast Notification Banner -->
+    <div id="toastNotification" class="hidden fixed bottom-5 right-5 z-50 bg-emerald-600 text-white px-4 py-3 rounded-xl shadow-2xl border border-emerald-400 flex items-center space-x-3 transition-all duration-300 transform translate-y-2">
+      <span class="text-lg">✅</span>
+      <span id="toastMessage" class="text-xs font-semibold">Action completed successfully!</span>
+    </div>
+
+    <!-- TAB 1: GENERATOR SECTION -->
+    <section id="tabGenerator" class="space-y-6">
+
+      <!-- Step 1: Branding & Order Header Info -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-xl space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-800 pb-3 gap-2">
           <div>
-            <label id="lblClient" class="text-[10px] text-slate-400 block mb-1">Client Name</label>
-            <input type="text" id="clientNameInput" value="John Smith" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-slate-200 focus:outline-none focus:border-amber-500">
+            <h2 id="uiStep1Title" class="text-sm font-bold text-amber-400 uppercase tracking-wider">1. Project & Client Details</h2>
+            <p id="uiStep1Sub" class="text-xs text-slate-400">Specify contractor info, job details, and system generated order number.</p>
+          </div>
+          <div class="flex items-center space-x-2 bg-slate-950 px-3 py-1.5 rounded-lg border border-slate-800">
+            <span id="uiLblOrderNum" class="text-[11px] font-semibold text-slate-400">Order #:</span>
+            <span id="displayOrderNum" class="font-mono text-xs font-bold text-amber-400">JS-2026-0000</span>
+            <button onclick="regenerateOrderNumber()" title="Generate New Order Number" class="text-slate-400 hover:text-amber-400 ml-1 transition">
+              🔄
+            </button>
           </div>
         </div>
-        <div class="grid grid-cols-2 gap-2">
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label id="lblAddress" class="text-[10px] text-slate-400 block mb-1">Property / Job Address</label>
-            <input type="text" id="clientAddressInput" value="123 Maple Street, Austin TX" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-slate-200 focus:outline-none focus:border-amber-500">
+            <label id="lblCompany" class="block text-xs font-medium text-slate-300 mb-1">Contractor / Company Name</label>
+            <input type="text" id="companyNameInput" value="Apex Contracting Services" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:ring-2 focus:ring-amber-500 focus:outline-none transition">
           </div>
           <div>
-            <label id="lblArea" class="text-[10px] text-slate-400 block mb-1">Job Area / Room Focus</label>
-            <select id="roomCategorySelect" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-amber-400 font-bold focus:outline-none focus:border-amber-500">
-              <option value="General & Whole House">General / Whole House</option>
+            <label id="lblClient" class="block text-xs font-medium text-slate-300 mb-1">Client Name</label>
+            <input type="text" id="clientNameInput" value="Sarah Jenkins" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:ring-2 focus:ring-amber-500 focus:outline-none transition">
+          </div>
+          <div>
+            <label id="lblAddress" class="block text-xs font-medium text-slate-300 mb-1">Property / Job Site Address</label>
+            <input type="text" id="clientAddressInput" value="742 Evergreen Terrace, Springfield" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:ring-2 focus:ring-amber-500 focus:outline-none transition">
+          </div>
+          <div>
+            <label id="lblArea" class="block text-xs font-medium text-slate-300 mb-1">Job Area Focus</label>
+            <select id="roomCategorySelect" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-amber-400 font-semibold focus:ring-2 focus:ring-amber-500 focus:outline-none transition">
+              <option value="General Remodel">General / Remodel</option>
               <option value="Kitchen Remodel">Kitchen / Cocina</option>
-              <option value="Master Bathroom">Bathroom / Baño</option>
-              <option value="Exterior & Roofing">Exterior / Roofing</option>
-              <option value="Basement / Addition">Basement / Adición</option>
+              <option value="Bathroom Modernization">Bathroom / Baño</option>
+              <option value="Roofing & Exterior">Roofing & Exterior</option>
+              <option value="Flooring & Tile">Flooring & Tile</option>
+              <option value="Electrical & Plumbing">Electrical & Plumbing</option>
             </select>
           </div>
         </div>
       </div>
 
-      <!-- Walkthrough Notes Panel -->
-      <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 space-y-3">
-        <div class="flex justify-between items-center flex-wrap gap-2">
-          <h2 id="lblNotesTitle" class="text-sm font-semibold text-slate-200">2. Site Walkthrough Notes</h2>
-          <div class="flex space-x-2">
-            <label class="bg-slate-800 hover:bg-slate-700 text-amber-400 text-xs font-semibold px-2.5 py-1.5 rounded-lg transition cursor-pointer flex items-center space-x-1">
-              <span id="lblAddPhoto">📷 Add Photo</span>
+      <!-- Step 2: Site Walkthrough Notes & Voice/Photo Capture -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-xl space-y-4">
+        <div class="flex flex-col sm:flex-row justify-between sm:items-center border-b border-slate-800 pb-3 gap-2">
+          <div>
+            <h2 id="uiStep2Title" class="text-sm font-bold text-amber-400 uppercase tracking-wider">2. Walkthrough Inspection & Audio Notes</h2>
+            <p id="uiStep2Sub" class="text-xs text-slate-400">Capture field notes via voice dictation, attach photo evidence, or type directly.</p>
+          </div>
+          <div class="flex items-center space-x-2">
+            <!-- Camera / Photo Upload -->
+            <label class="bg-slate-800 hover:bg-slate-700 text-amber-400 border border-slate-700 text-xs font-semibold px-3 py-1.5 rounded-xl cursor-pointer transition flex items-center space-x-1.5">
+              <span>📷</span>
+              <span id="uiBtnAddPhoto">Add Photo</span>
               <input type="file" id="cameraInput" accept="image/*" capture="environment" onchange="handlePhotoUpload(event)" class="hidden">
             </label>
-            <button id="micBtn" onclick="toggleVoiceRecording()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold px-3 py-1.5 rounded-lg transition flex items-center space-x-1.5">
-              <span>🎙️ <span id="lblVoice">Voice Dictation</span></span>
+
+            <!-- Voice Dictation Button -->
+            <button id="micBtn" onclick="toggleVoiceRecording()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold px-3 py-1.5 rounded-xl transition flex items-center space-x-1.5">
+              <span id="micIcon">🎙️</span>
+              <span id="uiBtnVoice">Voice Dictation</span>
             </button>
           </div>
         </div>
 
-        <!-- Photo Thumbnail Preview -->
-        <div id="photoPreviewWrapper" class="hidden relative inline-block">
-          <img id="photoPreview" class="h-20 w-20 object-cover rounded-lg border border-amber-500/50">
-          <button onclick="removePhoto()" class="absolute -top-2 -right-2 bg-rose-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] font-bold shadow">✕</button>
+        <!-- Photo Thumbnail Preview Container -->
+        <div id="photoPreviewWrapper" class="hidden relative inline-block group">
+          <img id="photoPreview" class="h-24 w-24 object-cover rounded-xl border-2 border-amber-500 shadow-md">
+          <button onclick="removePhoto()" class="absolute -top-2 -right-2 bg-rose-600 hover:bg-rose-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold shadow-lg transition">
+            ✕
+          </button>
         </div>
-        
-        <textarea id="notesInput" rows="4" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-sm text-slate-200 focus:outline-none focus:border-amber-500" placeholder="Type or dictate notes...&#10;Ex: Demo old cabinets, install 100 sq ft tile, run new supply lines."></textarea>
-        
-        <button id="btnGenerate" onclick="generateEstimate()" class="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold py-2.5 rounded-lg text-sm transition">
-          Generate Instant Estimate
+
+        <!-- Notes Area -->
+        <textarea id="notesInput" rows="4" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs sm:text-sm text-slate-200 focus:ring-2 focus:ring-amber-500 focus:outline-none transition leading-relaxed" placeholder="Type or dictate notes...&#10;Ex: Demo old cabinetry, install 120 sq ft custom ceramic tiles, replace sink supply lines, repaint main walls."></textarea>
+
+        <button id="btnGenerate" onclick="generateEstimate()" class="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-3 rounded-xl text-sm transition shadow-lg shadow-amber-500/10 flex items-center justify-center space-x-2">
+          <span>⚡</span>
+          <span id="uiBtnGenerate">Generate Instant Estimate</span>
         </button>
       </div>
 
-      <!-- Output Panel -->
-      <div id="outputWrapper" class="hidden bg-slate-900 p-4 rounded-xl border border-slate-800 space-y-4">
-        <div class="flex justify-between items-center border-b border-slate-800 pb-2">
-          <h2 id="lblProposalTitle" class="text-sm font-semibold text-slate-200">3. Itemized Proposal</h2>
-          <button id="btnAddItem" onclick="addNewLineItem()" class="bg-slate-800 hover:bg-slate-700 text-amber-400 text-xs font-semibold px-2.5 py-1 rounded transition">
-            + Add Line Item
+      <!-- Step 3: Itemized Proposal Output -->
+      <div id="outputWrapper" class="hidden bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-2xl space-y-5">
+        <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+          <div>
+            <h2 id="uiStep3Title" class="text-sm font-bold text-amber-400 uppercase tracking-wider">3. Itemized Proposal & Scope</h2>
+            <p id="uiStep3Sub" class="text-xs text-slate-400">Review line items, adjust pricing, collect signature, and export PDF.</p>
+          </div>
+          <button onclick="addNewLineItem()" class="bg-slate-800 hover:bg-slate-700 text-amber-400 border border-slate-700 text-xs font-semibold px-3 py-1.5 rounded-xl transition flex items-center space-x-1">
+            <span>+</span>
+            <span id="uiBtnAddItem">Add Item</span>
           </button>
         </div>
 
-        <div id="outputContainer" class="space-y-2 text-xs bg-slate-950 p-3 rounded-lg border border-slate-800"></div>
-        
-        <!-- Interactive Signature Pad Area -->
-        <div class="bg-slate-950 p-3 rounded-lg border border-slate-800 space-y-2">
+        <!-- Printable Estimate Document Container -->
+        <div id="printableDocument" class="bg-slate-950 p-4 sm:p-6 rounded-xl border border-slate-800 text-slate-200 text-xs space-y-4">
+          <!-- Document Dynamic Header -->
+          <div class="flex flex-col sm:flex-row justify-between items-start border-b border-slate-800 pb-4 gap-3">
+            <div>
+              <div class="flex items-center space-x-2">
+                <h3 id="docCompanyName" class="text-base font-bold text-amber-400">Apex Contracting Services</h3>
+                <span id="docOrderBadge" class="bg-amber-500/10 border border-amber-500/20 text-amber-400 font-mono text-[10px] px-2 py-0.5 rounded font-bold">#JS-2026-0000</span>
+              </div>
+              <p id="docClientDetails" class="text-slate-400 text-[11px] mt-1">Client: Sarah Jenkins | 742 Evergreen Terrace</p>
+              <p id="docRoomCategory" class="text-slate-400 text-[11px]">Scope Focus: Kitchen Remodel</p>
+            </div>
+            <div class="text-left sm:text-right">
+              <span id="docDate" class="text-slate-400 text-[11px] block">Date: Oct 13, 2026</span>
+              <span id="docTime" class="text-slate-500 text-[10px] font-mono block">Issued: 08:00 PM</span>
+            </div>
+          </div>
+
+          <!-- Dynamic Line Items List -->
+          <div id="lineItemsContainer" class="space-y-2"></div>
+
+          <!-- Financial Breakdown -->
+          <div class="pt-3 border-t border-slate-800 space-y-1.5 text-xs text-slate-300">
+            <div class="flex justify-between"><span id="uiLblSubtotal">Subtotal:</span><span id="docSubtotal" class="font-mono">$0.00</span></div>
+            <div class="flex justify-between text-slate-400"><span id="uiLblContingency">Contingency (10%):</span><span id="docContingency" class="font-mono">$0.00</span></div>
+            <div class="flex justify-between text-slate-400"><span id="uiLblTax">Est. Tax (8%):</span><span id="docTax" class="font-mono">$0.00</span></div>
+            <div class="flex justify-between font-bold text-sm text-slate-100 pt-2 border-t border-slate-800">
+              <span id="uiLblGrandTotal">Grand Total:</span>
+              <span id="docGrandTotal" class="font-mono text-amber-400">$0.00</span>
+            </div>
+          </div>
+
+          <!-- Photo Evidence Attachment on Proposal -->
+          <div id="docPhotoContainer" class="hidden pt-3 border-t border-slate-800 space-y-1">
+            <p id="uiLblSitePhoto" class="text-[10px] uppercase font-bold text-slate-400">Site Inspection Photo</p>
+            <img id="docSitePhotoImg" class="max-h-48 rounded-lg border border-slate-800 object-cover">
+          </div>
+
+          <!-- Terms & Signatures Block -->
+          <div class="pt-4 border-t border-slate-800 space-y-3">
+            <p id="uiLblTermsTitle" class="font-bold text-slate-300 text-[11px]">Terms & Conditions:</p>
+            <p id="uiTermsBody" class="text-[10px] text-slate-400 leading-relaxed">
+              Payment due upon completion. This estimate is valid for 30 days from issuance. Any unforeseen structural damage will be billed separately upon client approval.
+            </p>
+            <div class="grid grid-cols-2 gap-6 pt-4 items-end">
+              <div class="border-t border-slate-700 pt-2">
+                <span id="uiLblContractorSig" class="text-[10px] text-slate-400 block font-medium">Contractor Signature</span>
+                <p id="docContractorSigName" class="font-bold text-amber-400 text-xs italic mt-2">Apex Contracting</p>
+              </div>
+              <div class="border-t border-slate-700 pt-2">
+                <div id="docClientSigDisplay" class="h-10 flex items-center justify-center">
+                  <span class="text-[10px] text-slate-600 italic">Pending Signature</span>
+                </div>
+                <span id="uiLblClientSig" class="text-[10px] text-slate-400 block font-medium">Client Approval Signature</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Interactive Signature Touch Canvas -->
+        <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2">
           <div class="flex justify-between items-center">
-            <span id="lblSigTitle" class="text-xs font-semibold text-slate-300">Client Signature Approval</span>
-            <button id="lblClearSig" onclick="clearSignature()" class="text-[10px] text-rose-400 hover:underline">Clear Sign</button>
+            <span id="uiLblSigTitle" class="text-xs font-semibold text-slate-300">Client Signature Approval</span>
+            <button onclick="clearSignature()" id="uiBtnClearSig" class="text-[11px] text-rose-400 hover:text-rose-300 font-medium">Clear Sign</button>
           </div>
-          <div class="border border-slate-800 rounded bg-white overflow-hidden touch-none">
-            <canvas id="sigCanvas" height="100" class="w-full cursor-crosshair"></canvas>
+          <div class="border border-slate-800 rounded-xl bg-white overflow-hidden">
+            <canvas id="sigCanvas" class="w-full h-24 cursor-crosshair"></canvas>
           </div>
         </div>
 
-        <div class="grid grid-cols-3 gap-2 pt-2">
-          <button id="btnPdf" onclick="downloadPDF()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold py-2 rounded-lg text-xs transition">
-            📄 Export PDF
+        <!-- Export Action Buttons -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+          <button id="btnPdf" onclick="downloadPDF()" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 font-semibold py-2.5 rounded-xl text-xs transition flex items-center justify-center space-x-1.5">
+            <span>📄</span>
+            <span id="uiBtnExportPdf">Export PDF</span>
           </button>
-          <button id="btnShare" onclick="shareProposal()" class="bg-sky-600 hover:bg-sky-500 text-white font-semibold py-2 rounded-lg text-xs transition">
-            📤 Text / Share
+          <button id="btnShare" onclick="shareProposal()" class="bg-sky-600 hover:bg-sky-500 text-white font-semibold py-2.5 rounded-xl text-xs transition flex items-center justify-center space-x-1.5">
+            <span>📤</span>
+            <span id="uiBtnShare">Text / Share</span>
           </button>
-          <button id="btnSave" onclick="saveEstimate()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-2 rounded-lg text-xs transition">
-            💾 Save Local
+          <button id="btnSave" onclick="saveEstimate()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-2.5 rounded-xl text-xs transition flex items-center justify-center space-x-1.5">
+            <span>💾</span>
+            <span id="uiBtnSave">Save Record</span>
           </button>
         </div>
       </div>
-    </div>
+    </section>
 
-    <!-- TAB 2: HISTORY -->
-    <div id="historyTab" class="hidden space-y-4">
-      <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 space-y-3">
-        <div class="flex justify-between items-center">
-          <h2 id="lblHistoryTitle" class="text-sm font-semibold text-slate-200">Saved Estimates</h2>
-          <button id="lblRefresh" onclick="fetchHistory()" class="text-xs text-amber-500 hover:underline">Refresh</button>
+    <!-- TAB 2: HISTORY SECTION -->
+    <section id="tabHistory" class="hidden space-y-4">
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-xl space-y-4">
+        <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+          <div>
+            <h2 id="uiHistTitle" class="text-sm font-bold text-amber-400 uppercase tracking-wider">Saved Proposals History</h2>
+            <p id="uiHistSub" class="text-xs text-slate-400">View locally saved estimates or synched database logs.</p>
+          </div>
+          <button onclick="fetchHistory()" class="text-xs bg-slate-800 hover:bg-slate-700 border border-slate-700 text-amber-400 font-semibold px-3 py-1.5 rounded-xl transition">
+            🔄 <span id="uiBtnRefresh">Refresh</span>
+          </button>
         </div>
-        <div id="historyContainer" class="space-y-3 text-xs">
-          <p id="lblNoHistory" class="text-slate-500 italic">Click refresh to load history...</p>
+
+        <div id="historyListContainer" class="space-y-3">
+          <p id="uiNoHistory" class="text-xs text-slate-500 italic py-4 text-center">No estimates saved yet. Generate one to view history.</p>
         </div>
       </div>
-    </div>
+    </section>
 
-  </div>
+  </main>
 
   <script>
-    // --- TRANSLATION DICTIONARY ---
+    /* Global Application State & Translation Strings */
     const translations = {
       en: {
         subHeader: "Field Operations & Estimate Engine",
-        tabGen: "Generator",
-        tabHist: "History",
-        detailsTitle: "1. Proposal & Branding Details",
-        company: "Contractor / Company Name",
-        client: "Client Name",
-        address: "Property / Job Address",
-        area: "Job Area / Room Focus",
-        notesTitle: "2. Site Walkthrough Notes",
-        addPhoto: "📷 Add Photo",
-        voice: "Voice Dictation",
-        notesPlaceholder: "Type or dictate notes...\nEx: Demo old cabinets, install 100 sq ft tile, run new supply lines.",
-        generate: "Generate Instant Estimate",
-        proposalTitle: "3. Itemized Proposal",
-        addItem: "+ Add Line Item",
-        sigTitle: "Client Signature Approval",
-        clearSig: "Clear Sign",
-        btnPdf: "📄 Export PDF",
-        btnShare: "📤 Text / Share",
-        btnSave: "💾 Save Local",
-        historyTitle: "Saved Estimates",
-        refresh: "Refresh",
-        noHistory: "Click refresh to load history...",
-        termsTitle: "Terms & Conditions:",
-        termsText: "Payment due upon completion. This estimate is valid for 30 days from issuance. Any unforeseen structural damage will be billed separately upon client approval.",
-        contractorSig: "Contractor Signature",
-        clientSig: "Client Approval Signature",
-        subtotal: "Subtotal:",
-        contingency: "Contingency (10%):",
-        tax: "Est. Tax (8%):",
-        grandTotal: "Grand Total:",
-        sitePhotoLabel: "Site Inspection Photo:"
+        navGen: "Generator",
+        navHist: "History",
+        step1Title: "1. Project & Client Details",
+        step1Sub: "Specify contractor info, job details, and system generated order number.",
+        orderNumLbl: "Order #:",
+        companyLbl: "Contractor / Company Name",
+        clientLbl: "Client Name",
+        addressLbl: "Property / Job Site Address",
+        areaLbl: "Job Area Focus",
+        step2Title: "2. Walkthrough Inspection & Audio Notes",
+        step2Sub: "Capture field notes via voice dictation, attach photo evidence, or type directly.",
+        btnAddPhoto: "Add Photo",
+        btnVoice: "Voice Dictation",
+        listening: "Listening...",
+        notesPlaceholder: "Type or dictate notes...\nEx: Demo old cabinetry, install 120 sq ft custom ceramic tiles, replace sink supply lines, repaint main walls.",
+        btnGenerate: "Generate Instant Estimate",
+        step3Title: "3. Itemized Proposal & Scope",
+        step3Sub: "Review line items, adjust pricing, collect signature, and export PDF.",
+        btnAddItem: "Add Item",
+        subtotalLbl: "Subtotal:",
+        contingencyLbl: "Contingency (10%):",
+        taxLbl: "Est. Tax (8%):",
+        grandTotalLbl: "Grand Total:",
+        sitePhotoLbl: "Site Inspection Photo",
+        termsTitleLbl: "Terms & Conditions:",
+        termsBodyLbl: "Payment due upon completion. This estimate is valid for 30 days from issuance. Any unforeseen structural damage will be billed separately upon client approval.",
+        contractorSigLbl: "Contractor Signature",
+        clientSigLbl: "Client Approval Signature",
+        sigTitleLbl: "Client Signature Approval",
+        btnClearSigLbl: "Clear Sign",
+        btnExportPdfLbl: "Export PDF",
+        btnShareLbl: "Text / Share",
+        btnSaveLbl: "Save Record",
+        histTitleLbl: "Saved Proposals History",
+        histSubLbl: "View locally saved estimates or synched database logs.",
+        btnRefreshLbl: "Refresh",
+        noHistoryLbl: "No estimates saved yet. Generate one to view history.",
+        toastSaved: "Estimate saved successfully!",
+        toastCopied: "Proposal summary copied to clipboard!",
       },
       es: {
         subHeader: "Motor de Operaciones y Presupuestos",
-        tabGen: "Generador",
-        tabHist: "Historial",
-        detailsTitle: "1. Detalles de Propuesta y Marca",
-        company: "Nombre del Contratista / Empresa",
-        client: "Nombre del Cliente",
-        address: "Dirección de la Propiedad / Trabajo",
-        area: "Área de Trabajo / Enfoque",
-        notesTitle: "2. Notas de Inspección del Sitio",
-        addPhoto: "📷 Añadir Foto",
-        voice: "Dictado por Voz",
-        notesPlaceholder: "Escriba o dicte las notas...\nEj: Demoler gabinetes, instalar 100 pies cuadrados de azulejo, tubería nueva.",
-        generate: "Generar Presupuesto Instantáneo",
-        proposalTitle: "3. Propuesta Detallada",
-        addItem: "+ Añadir Ítem",
-        sigTitle: "Aprobación y Firma del Cliente",
-        clearSig: "Borrar Firma",
-        btnPdf: "📄 Exportar PDF",
-        btnShare: "📤 Enviar / Compartir",
-        btnSave: "💾 Guardar Local",
-        historyTitle: "Presupuestos Guardados",
-        refresh: "Actualizar",
-        noHistory: "Haga clic en actualizar para cargar el historial...",
-        termsTitle: "Términos y Condiciones:",
-        termsText: "Pago vencido al finalizar. Este presupuesto es válido por 30 días a partir de su emisión. Cualquier daño estructural imprevisto se facturará por separado.",
-        contractorSig: "Firma del Contratista",
-        clientSig: "Firma de Aprobación del Cliente",
-        subtotal: "Subtotal:",
-        contingency: "Contingencia (10%):",
-        tax: "Impuesto Est. (8%):",
-        grandTotal: "Gran Total:",
-        sitePhotoLabel: "Foto de Inspección:"
+        navGen: "Generador",
+        navHist: "Historial",
+        step1Title: "1. Detalles del Proyecto y Cliente",
+        step1Sub: "Especifique información del contratista, cliente y número de orden.",
+        orderNumLbl: "Orden #:",
+        companyLbl: "Nombre del Contratista / Empresa",
+        clientLbl: "Nombre del Cliente",
+        addressLbl: "Dirección de la Propiedad / Trabajo",
+        areaLbl: "Área de Trabajo",
+        step2Title: "2. Inspección del Sitio y Notas por Voz",
+        step2Sub: "Capture notas mediante dictado de voz, adjunte fotos o escriba directamente.",
+        btnAddPhoto: "Añadir Foto",
+        btnVoice: "Dictado por Voz",
+        listening: "Escuchando...",
+        notesPlaceholder: "Escriba o dicte las notas del sitio...\nEj: Demoler gabinetes antiguos, instalar 120 pies cuadrados de azulejos, reemplazar tuberías.",
+        btnGenerate: "Generar Presupuesto Instantáneo",
+        step3Title: "3. Propuesta Detallada y Alcance",
+        step3Sub: "Revise ítems, ajuste precios, recolecte firma y exporte a PDF.",
+        btnAddItem: "Añadir Ítem",
+        subtotalLbl: "Subtotal:",
+        contingencyLbl: "Contingencia (10%):",
+        taxLbl: "Impuesto Est. (8%):",
+        grandTotalLbl: "Gran Total:",
+        sitePhotoLbl: "Foto de Inspección del Sitio",
+        termsTitleLbl: "Términos y Condiciones:",
+        termsBodyLbl: "Pago al finalizar el trabajo. Este presupuesto es válido por 30 días. Daños estructurales imprevistos se facturarán por separado.",
+        contractorSigLbl: "Firma del Contratista",
+        clientSigLbl: "Firma de Aprobación del Cliente",
+        sigTitleLbl: "Aprobación y Firma del Cliente",
+        btnClearSigLbl: "Borrar Firma",
+        btnExportPdfLbl: "Exportar PDF",
+        btnShareLbl: "Enviar / Compartir",
+        btnSaveLbl: "Guardar Registro",
+        histTitleLbl: "Historial de Presupuestos",
+        histSubLbl: "Vea estimaciones guardadas localmente o sincronizadas.",
+        btnRefreshLbl: "Actualizar",
+        noHistoryLbl: "No hay presupuestos guardados aún. Genere uno para ver el historial.",
+        toastSaved: "¡Presupuesto guardado con éxito!",
+        toastCopied: "¡Resumen copiado al portapapeles!",
       }
     };
 
     let currentLang = 'en';
+    let currentEstimate = null;
+    let currentSitePhoto = null;
+    let recognition = null;
+    let isRecording = false;
 
-    function switchLanguage(lang) {
+    /* Supabase Client Integration Placeholder */
+    const SUPABASE_URL = '';
+    const SUPABASE_ANON_KEY = '';
+    let supabaseClient = null;
+    if (SUPABASE_URL && SUPABASE_URL.startsWith('http')) {
+      try { supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY); } catch (e) {}
+    }
+
+    /* Initialize Application on DOM Ready */
+    window.addEventListener('DOMContentLoaded', () => {
+      regenerateOrderNumber();
+      initSignatureCanvas();
+      switchTab('generator');
+    });
+
+    /* ORDER NUMBER GENERATOR */
+    function generateOrderNumber() {
+      const year = new Date().getFullYear();
+      const randomDigits = Math.floor(1000 + Math.random() * 9000);
+      return `JS-${year}-${randomDigits}`;
+    }
+
+    function regenerateOrderNumber() {
+      const orderNum = generateOrderNumber();
+      document.getElementById('displayOrderNum').innerText = orderNum;
+      if (currentEstimate) {
+        currentEstimate.orderNumber = orderNum;
+        document.getElementById('docOrderBadge').innerText = `#${orderNum}`;
+      }
+    }
+
+    /* INTERNATIONALIZATION / LANGUAGE TOGGLE */
+    function changeLanguage(lang) {
       currentLang = lang;
       const t = translations[lang];
 
-      document.getElementById('subHeader').innerText = t.subHeader;
-      document.getElementById('tabGenBtn').innerText = t.tabGen;
-      document.getElementById('tabHistBtn').innerText = t.tabHist;
-      document.getElementById('lblDetailsTitle').innerText = t.detailsTitle;
-      document.getElementById('lblCompany').innerText = t.company;
-      document.getElementById('lblClient').innerText = t.client;
-      document.getElementById('lblAddress').innerText = t.address;
-      document.getElementById('lblArea').innerText = t.area;
-      document.getElementById('lblNotesTitle').innerText = t.notesTitle;
-      document.getElementById('lblAddPhoto').innerText = t.addPhoto;
-      document.getElementById('lblVoice').innerText = t.voice;
+      document.getElementById('uiSubHeader').innerText = t.subHeader;
+      document.getElementById('uiNavGen').innerText = t.navGen;
+      document.getElementById('uiNavHist').innerText = t.navHist;
+      document.getElementById('uiStep1Title').innerText = t.step1Title;
+      document.getElementById('uiStep1Sub').innerText = t.step1Sub;
+      document.getElementById('uiLblOrderNum').innerText = t.orderNumLbl;
+      document.getElementById('lblCompany').innerText = t.companyLbl;
+      document.getElementById('lblClient').innerText = t.clientLbl;
+      document.getElementById('lblAddress').innerText = t.addressLbl;
+      document.getElementById('lblArea').innerText = t.areaLbl;
+      document.getElementById('uiStep2Title').innerText = t.step2Title;
+      document.getElementById('uiStep2Sub').innerText = t.step2Sub;
+      document.getElementById('uiBtnAddPhoto').innerText = t.btnAddPhoto;
+      document.getElementById('uiBtnVoice').innerText = t.btnVoice;
       document.getElementById('notesInput').placeholder = t.notesPlaceholder;
-      document.getElementById('btnGenerate').innerText = t.generate;
-      document.getElementById('lblProposalTitle').innerText = t.proposalTitle;
-      document.getElementById('btnAddItem').innerText = t.addItem;
-      document.getElementById('lblSigTitle').innerText = t.sigTitle;
-      document.getElementById('lblClearSig').innerText = t.clearSig;
-      document.getElementById('btnPdf').innerText = t.btnPdf;
-      document.getElementById('btnShare').innerText = t.btnShare;
-      document.getElementById('btnSave').innerText = t.btnSave;
-      document.getElementById('lblHistoryTitle').innerText = t.historyTitle;
-      document.getElementById('lblRefresh').innerText = t.refresh;
-      document.getElementById('lblNoHistory').innerText = t.noHistory;
+      document.getElementById('uiBtnGenerate').innerText = t.btnGenerate;
+      document.getElementById('uiStep3Title').innerText = t.step3Title;
+      document.getElementById('uiStep3Sub').innerText = t.step3Sub;
+      document.getElementById('uiBtnAddItem').innerText = t.btnAddItem;
+      document.getElementById('uiLblSubtotal').innerText = t.subtotalLbl;
+      document.getElementById('uiLblContingency').innerText = t.contingencyLbl;
+      document.getElementById('uiLblTax').innerText = t.taxLbl;
+      document.getElementById('uiLblGrandTotal').innerText = t.grandTotalLbl;
+      document.getElementById('uiLblSitePhoto').innerText = t.sitePhotoLbl;
+      document.getElementById('uiLblTermsTitle').innerText = t.termsTitleLbl;
+      document.getElementById('uiTermsBody').innerText = t.termsBodyLbl;
+      document.getElementById('uiLblContractorSig').innerText = t.contractorSigLbl;
+      document.getElementById('uiLblClientSig').innerText = t.clientSigLbl;
+      document.getElementById('uiLblSigTitle').innerText = t.sigTitleLbl;
+      document.getElementById('uiBtnClearSig').innerText = t.btnClearSigLbl;
+      document.getElementById('uiBtnExportPdf').innerText = t.btnExportPdfLbl;
+      document.getElementById('uiBtnShare').innerText = t.btnShareLbl;
+      document.getElementById('uiBtnSave').innerText = t.btnSaveLbl;
+      document.getElementById('uiHistTitle').innerText = t.histTitleLbl;
+      document.getElementById('uiHistSub').innerText = t.histSubLbl;
+      document.getElementById('uiBtnRefresh').innerText = t.btnRefreshLbl;
 
       if (currentEstimate) {
         renderEstimateUI();
       }
     }
 
-    const SUPABASE_URL = ''; 
-    const SUPABASE_ANON_KEY = ''; 
-    
-    let supabaseClient = null;
-    if (SUPABASE_URL && SUPABASE_URL.startsWith('http')) {
-      try { supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY); } catch (e) {}
+    /* SIGNATURE CANVAS CONTROLLER */
+    let sigCanvas, sigCtx, isDrawing = false;
+
+    function initSignatureCanvas() {
+      sigCanvas = document.getElementById('sigCanvas');
+      if (!sigCanvas) return;
+      sigCtx = sigCanvas.getContext('2d');
+
+      const resizeCanvas = () => {
+        const rect = sigCanvas.parentElement.getBoundingClientRect();
+        sigCanvas.width = rect.width || 300;
+        sigCanvas.height = 96;
+        sigCtx.strokeStyle = '#020617';
+        sigCtx.lineWidth = 2.5;
+        sigCtx.lineCap = 'round';
+        sigCtx.lineJoin = 'round';
+      };
+
+      resizeCanvas();
+      window.addEventListener('resize', resizeCanvas);
+
+      // Mouse Listeners
+      sigCanvas.addEventListener('mousedown', (e) => startSig(getCanvasCoords(e)));
+      sigCanvas.addEventListener('mousemove', (e) => moveSig(getCanvasCoords(e)));
+      sigCanvas.addEventListener('mouseup', endSig);
+      sigCanvas.addEventListener('mouseleave', endSig);
+
+      // Touch Listeners
+      sigCanvas.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        startSig(getCanvasCoords(e.touches[0]));
+      }, { passive: false });
+
+      sigCanvas.addEventListener('touchmove', (e) => {
+        e.preventDefault();
+        moveSig(getCanvasCoords(e.touches[0]));
+      }, { passive: false });
+
+      sigCanvas.addEventListener('touchend', endSig);
     }
 
-    let currentEstimate = null;
-    let currentSitePhoto = null;
-    let recognition = null;
-    let isRecording = false;
-
-    // --- ROBUST SIGNATURE PAD LOGIC ---
-    let canvas, ctx, isDrawing = false;
-
-    window.addEventListener('DOMContentLoaded', () => {
-      canvas = document.getElementById('sigCanvas');
-      if (canvas) {
-        ctx = canvas.getContext('2d');
-        canvas.width = canvas.parentElement.clientWidth || 300;
-        canvas.height = 100;
-
-        ctx.strokeStyle = '#020617';
-        ctx.lineWidth = 2.5;
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-
-        canvas.addEventListener('mousedown', startDrawing);
-        canvas.addEventListener('mousemove', draw);
-        canvas.addEventListener('mouseup', stopDrawing);
-        canvas.addEventListener('mouseleave', stopDrawing);
-
-        canvas.addEventListener('touchstart', (e) => { e.preventDefault(); startDrawing(e.touches[0]); }, { passive: false });
-        canvas.addEventListener('touchmove', (e) => { e.preventDefault(); draw(e.touches[0]); }, { passive: false });
-        canvas.addEventListener('touchend', (e) => { e.preventDefault(); stopDrawing(); });
-      }
-    });
-
-    function getPosition(e, canvasElement) {
-      const rect = canvasElement.getBoundingClientRect();
+    function getCanvasCoords(e) {
+      const rect = sigCanvas.getBoundingClientRect();
       return {
-        x: (e.clientX - rect.left) * (canvasElement.width / rect.width),
-        y: (e.clientY - rect.top) * (canvasElement.height / rect.height)
+        x: (e.clientX - rect.left) * (sigCanvas.width / rect.width),
+        y: (e.clientY - rect.top) * (sigCanvas.height / rect.height)
       };
     }
 
-    function startDrawing(e) {
+    function startSig(pos) {
       isDrawing = true;
-      const pos = getPosition(e, canvas);
-      ctx.beginPath();
-      ctx.moveTo(pos.x, pos.y);
+      sigCtx.beginPath();
+      sigCtx.moveTo(pos.x, pos.y);
     }
 
-    function draw(e) {
+    function moveSig(pos) {
       if (!isDrawing) return;
-      const pos = getPosition(e, canvas);
-      ctx.lineTo(pos.x, pos.y);
-      ctx.stroke();
+      sigCtx.lineTo(pos.x, pos.y);
+      sigCtx.stroke();
+      updateClientSigDisplay();
     }
 
-    function stopDrawing() { isDrawing = false; }
+    function endSig() {
+      isDrawing = false;
+    }
+
     function clearSignature() {
-      if (!ctx || !canvas) return;
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      if (!sigCtx || !sigCanvas) return;
+      sigCtx.clearRect(0, 0, sigCanvas.width, sigCanvas.height);
+      document.getElementById('docClientSigDisplay').innerHTML = `<span class="text-[10px] text-slate-600 italic">Pending Signature</span>`;
     }
 
-    // --- PHOTO UPLOAD / CAMERA ---
-    function handlePhotoUpload(event) {
-      const file = event.target.files[0];
+    function updateClientSigDisplay() {
+      const dataUrl = sigCanvas.toDataURL();
+      document.getElementById('docClientSigDisplay').innerHTML = `<img src="${dataUrl}" class="h-8 object-contain">`;
+    }
+
+    /* PHOTO ATTACHMENT LOGIC */
+    function handlePhotoUpload(e) {
+      const file = e.target.files[0];
       if (!file) return;
+
       const reader = new FileReader();
-      reader.onload = function(e) {
-        currentSitePhoto = e.target.result;
-        const previewWrapper = document.getElementById("photoPreviewWrapper");
-        const previewImg = document.getElementById("photoPreview");
-        if (previewImg && previewWrapper) {
-          previewImg.src = currentSitePhoto;
-          previewWrapper.classList.remove("hidden");
+      reader.onload = function(event) {
+        currentSitePhoto = event.target.result;
+        document.getElementById('photoPreview').src = currentSitePhoto;
+        document.getElementById('photoPreviewWrapper').classList.remove('hidden');
+
+        if (currentEstimate) {
+          renderEstimateUI();
         }
       };
       reader.readAsDataURL(file);
@@ -344,19 +575,25 @@
 
     function removePhoto() {
       currentSitePhoto = null;
-      document.getElementById("cameraInput").value = "";
-      document.getElementById("photoPreviewWrapper").classList.add("hidden");
+      document.getElementById('cameraInput').value = '';
+      document.getElementById('photoPreviewWrapper').classList.add('hidden');
+      if (currentEstimate) {
+        renderEstimateUI();
+      }
     }
 
-    // --- VOICE DICTATION ---
+    /* VOICE DICTATION LOGIC */
     function toggleVoiceRecording() {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (!SpeechRecognition) {
-        alert("Speech recognition not supported on this browser.");
+        showToast("Speech Recognition is not supported by your browser.", "error");
         return;
       }
-      const micBtn = document.getElementById("micBtn");
-      const notesInput = document.getElementById("notesInput");
+
+      const micBtn = document.getElementById('micBtn');
+      const micIcon = document.getElementById('micIcon');
+      const uiBtnVoice = document.getElementById('uiBtnVoice');
+      const notesInput = document.getElementById('notesInput');
 
       if (!isRecording) {
         recognition = new SpeechRecognition();
@@ -366,20 +603,24 @@
 
         recognition.onstart = () => {
           isRecording = true;
-          micBtn.className = "bg-rose-600 animate-pulse text-white text-xs font-bold px-3 py-1.5 rounded-lg transition flex items-center space-x-1.5";
-          micBtn.innerHTML = "<span>🔴 Listening...</span>";
+          micBtn.className = "bg-rose-600 animate-pulse text-white border border-rose-500 text-xs font-semibold px-3 py-1.5 rounded-xl transition flex items-center space-x-1.5";
+          micIcon.innerText = "🔴";
+          uiBtnVoice.innerText = translations[currentLang].listening;
         };
+
         recognition.onresult = (event) => {
           let transcript = '';
           for (let i = event.resultIndex; i < event.results.length; ++i) {
             transcript += event.results[i][0].transcript;
           }
           if (transcript.trim()) {
-            notesInput.value = notesInput.value + (notesInput.value ? ' ' : '') + transcript;
+            notesInput.value += (notesInput.value ? ' ' : '') + transcript;
           }
         };
-        recognition.onerror = () => { stopVoiceRecording(); };
-        recognition.onend = () => { stopVoiceRecording(); };
+
+        recognition.onerror = () => stopVoiceRecording();
+        recognition.onend = () => stopVoiceRecording();
+
         try { recognition.start(); } catch (err) { stopVoiceRecording(); }
       } else {
         if (recognition) recognition.stop();
@@ -389,245 +630,306 @@
 
     function stopVoiceRecording() {
       isRecording = false;
-      const micBtn = document.getElementById("micBtn");
+      const micBtn = document.getElementById('micBtn');
+      const micIcon = document.getElementById('micIcon');
+      const uiBtnVoice = document.getElementById('uiBtnVoice');
+
       if (micBtn) {
-        micBtn.className = "bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold px-3 py-1.5 rounded-lg transition flex items-center space-x-1.5";
-        micBtn.innerHTML = `<span>🎙️ <span id="lblVoice">${translations[currentLang].voice}</span></span>`;
+        micBtn.className = "bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold px-3 py-1.5 rounded-xl transition flex items-center space-x-1.5";
+        micIcon.innerText = "🎙️";
+        uiBtnVoice.innerText = translations[currentLang].btnVoice;
       }
     }
 
+    /* NAVIGATION SWITCHING */
     function switchTab(tab) {
-      const genTab = document.getElementById('generatorTab');
-      const histTab = document.getElementById('historyTab');
-      const genBtn = document.getElementById('tabGenBtn');
-      const histBtn = document.getElementById('tabHistBtn');
-      const t = translations[currentLang];
+      const tabGen = document.getElementById('tabGenerator');
+      const tabHist = document.getElementById('tabHistory');
+      const navGen = document.getElementById('navTabGen');
+      const navHist = document.getElementById('navTabHist');
 
       if (tab === 'generator') {
-        genTab.classList.remove('hidden');
-        histTab.classList.add('hidden');
-        genBtn.className = "bg-amber-500 text-slate-950 text-xs font-bold px-3 py-1.5 rounded-lg transition";
-        histBtn.className = "bg-slate-800 text-slate-300 text-xs font-semibold px-3 py-1.5 rounded-lg transition";
+        tabGen.classList.remove('hidden');
+        tabHist.classList.add('hidden');
+        navGen.className = "px-3 py-1 text-xs font-semibold rounded-md bg-amber-500 text-slate-950 transition-all shadow";
+        navHist.className = "px-3 py-1 text-xs font-semibold rounded-md text-slate-400 hover:text-slate-200 transition-all";
       } else {
-        genTab.classList.add('hidden');
-        histTab.classList.remove('hidden');
-        histBtn.className = "bg-amber-500 text-slate-950 text-xs font-bold px-3 py-1.5 rounded-lg transition";
-        genBtn.className = "bg-slate-800 text-slate-300 text-xs font-semibold px-3 py-1.5 rounded-lg transition";
+        tabGen.classList.add('hidden');
+        tabHist.classList.remove('hidden');
+        navHist.className = "px-3 py-1 text-xs font-semibold rounded-md bg-amber-500 text-slate-950 transition-all shadow";
+        navGen.className = "px-3 py-1 text-xs font-semibold rounded-md text-slate-400 hover:text-slate-200 transition-all";
         fetchHistory();
       }
     }
 
-    // --- GENERATE ESTIMATE WITH ORDER NUMBER ---
+    /* ESTIMATE GENERATION ENGINE */
     function generateEstimate() {
-      const input = document.getElementById("notesInput").value;
-      const companyName = document.getElementById("companyNameInput").value || "ProBuild Services";
-      const clientName = document.getElementById("clientNameInput").value || "Residential Client";
-      const clientAddress = document.getElementById("clientAddressInput").value || "123 Maple Street, Austin TX";
-      const roomCategory = document.getElementById("roomCategorySelect").value;
+      const rawNotes = document.getElementById('notesInput').value;
+      if (!rawNotes.trim()) {
+        showToast(currentLang === 'es' ? "Por favor ingrese notas o use voz" : "Please enter walkthrough notes or use voice dictation", "error");
+        return;
+      }
 
-      if (!input.trim()) return;
+      const company = document.getElementById('companyNameInput').value || "Apex Contracting";
+      const client = document.getElementById('clientNameInput').value || "Valued Client";
+      const address = document.getElementById('clientAddressInput').value || "Job Site Location";
+      const room = document.getElementById('roomCategorySelect').value;
+      const orderNum = document.getElementById('displayOrderNum').innerText;
 
       const now = new Date();
-      const formattedDate = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-      const formattedTime = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-      
-      // Unique sequential order number generation
-      const orderNumber = `JS-${now.getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+      const formattedDate = now.toLocaleDateString(currentLang === 'es' ? 'es-ES' : 'en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      const formattedTime = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-      const rawLines = input.split(/[\n,.]+/);
+      // Intelligent line item parsing
+      const lines = rawNotes.split(/[\n,.]+/);
       const items = [];
-      let subtotal = 0;
 
-      rawLines.forEach((line) => {
-        const text = line.trim().toLowerCase();
-        if (text.length === 0) return;
+      lines.forEach((line) => {
+        const text = line.trim();
+        if (!text) return;
 
-        let category = roomCategory;
-        let cost = 150;
+        let cost = 180;
         let qty = 1;
 
-        if (text.includes("demo") || text.includes("demolish") || text.includes("remove") || text.includes("demoler")) {
-          cost = 85; qty = 8;
-        } else if (text.includes("tile") || text.includes("floor") || text.includes("sq ft") || text.includes("azulejo")) {
-          cost = 14; qty = 50;
-        } else if (text.includes("plumb") || text.includes("vanity") || text.includes("pipe") || text.includes("sink") || text.includes("tubería")) {
-          cost = 450; qty = 1;
+        const lower = text.toLowerCase();
+        if (lower.includes("demo") || lower.includes("demoler") || lower.includes("remove")) {
+          cost = 95; qty = 6;
+        } else if (lower.includes("tile") || lower.includes("azulejo") || lower.includes("floor") || lower.includes("piso")) {
+          cost = 12; qty = 100;
+        } else if (lower.includes("paint") || lower.includes("pintar") || lower.includes("wall")) {
+          cost = 45; qty = 4;
+        } else if (lower.includes("plumb") || lower.includes("sink") || lower.includes("tubería")) {
+          cost = 350; qty = 1;
         }
 
-        const total = cost * qty;
-        subtotal += total;
-        items.push({ category, description: line.trim(), quantity: qty, unit_cost: cost, total_cost: total });
+        items.push({
+          category: room,
+          description: text,
+          quantity: qty,
+          unitCost: cost,
+          totalCost: cost * qty
+        });
       });
 
       if (items.length === 0) {
-        items.push({ category: roomCategory, description: input.trim(), quantity: 1, unit_cost: 250, total_cost: 250 });
-        subtotal = 250;
+        items.push({
+          category: room,
+          description: rawNotes.trim(),
+          quantity: 1,
+          unitCost: 250,
+          totalCost: 250
+        });
       }
 
       currentEstimate = {
-        order_number: orderNumber,
-        company_name: companyName,
-        client_name: clientName,
-        client_address: clientAddress,
-        room_category: roomCategory,
-        created_date: formattedDate,
-        created_time: formattedTime,
-        language: currentLang,
-        line_items: items,
-        summary: { subtotal, grand_total: subtotal }
+        orderNumber: orderNum,
+        companyName: company,
+        clientName: client,
+        clientAddress: address,
+        roomCategory: room,
+        createdDate: formattedDate,
+        createdTime: formattedTime,
+        items: items
       };
 
+      document.getElementById('outputWrapper').classList.remove('hidden');
       renderEstimateUI();
+      
+      // Scroll smoothly to output
+      document.getElementById('outputWrapper').scrollIntoView({ behavior: 'smooth' });
     }
 
-    // --- RENDER ESTIMATE UI ---
+    /* RENDER ESTIMATE & RECALCULATE TOTALS */
     function renderEstimateUI() {
       if (!currentEstimate) return;
-      const t = translations[currentLang];
+
+      document.getElementById('docCompanyName').innerText = currentEstimate.companyName;
+      document.getElementById('docContractorSigName').innerText = currentEstimate.companyName;
+      document.getElementById('docOrderBadge').innerText = `#${currentEstimate.orderNumber}`;
+      document.getElementById('docClientDetails').innerText = `Client: ${currentEstimate.clientName} | ${currentEstimate.clientAddress}`;
+      document.getElementById('docRoomCategory').innerText = `Scope Focus: ${currentEstimate.roomCategory}`;
+      document.getElementById('docDate').innerText = `Date: ${currentEstimate.createdDate}`;
+      document.getElementById('docTime').innerText = `Issued: ${currentEstimate.createdTime}`;
 
       let subtotal = 0;
-      currentEstimate.line_items.forEach(item => {
-        subtotal += Number(item.total_cost) || 0;
+      const itemsContainer = document.getElementById('lineItemsContainer');
+      itemsContainer.innerHTML = '';
+
+      currentEstimate.items.forEach((item, idx) => {
+        subtotal += Number(item.totalCost) || 0;
+
+        const row = document.createElement('div');
+        row.className = "flex items-center justify-between bg-slate-900 p-2.5 rounded-lg border border-slate-800 gap-2";
+        row.innerHTML = `
+          <div class="flex-1">
+            <span class="text-[9px] font-mono uppercase text-amber-500 block">${item.category}</span>
+            <input type="text" value="${item.description}" onchange="updateItemDesc(${idx}, this.value)" class="w-full bg-slate-950 border border-slate-800 rounded px-2 py-1 text-xs text-slate-200 focus:outline-none focus:border-amber-500">
+          </div>
+          <div class="w-24 text-right">
+            <span class="text-[9px] text-slate-500 block">Total ($)</span>
+            <input type="number" value="${item.totalCost}" onchange="updateItemCost(${idx}, this.value)" class="w-full bg-slate-950 border border-slate-800 rounded px-2 py-1 text-xs text-emerald-400 font-bold text-right focus:outline-none focus:border-amber-500 font-mono">
+          </div>
+          <button onclick="removeLineItem(${idx})" class="text-rose-400 hover:text-rose-300 p-1 text-xs" title="Delete item">🗑️</button>
+        `;
+        itemsContainer.appendChild(row);
       });
+
       const contingency = Math.round(subtotal * 0.10);
       const tax = Math.round(subtotal * 0.08);
-      const grand_total = subtotal + contingency + tax;
+      const grandTotal = subtotal + contingency + tax;
 
-      currentEstimate.summary = { subtotal, estimated_contingency: contingency, tax, grand_total };
+      currentEstimate.subtotal = subtotal;
+      currentEstimate.contingency = contingency;
+      currentEstimate.tax = tax;
+      currentEstimate.grandTotal = grandTotal;
 
-      document.getElementById("outputWrapper").classList.remove("hidden");
-      const container = document.getElementById("outputContainer");
+      document.getElementById('docSubtotal').innerText = `$${subtotal.toLocaleString()}`;
+      document.getElementById('docContingency').innerText = `$${contingency.toLocaleString()}`;
+      document.getElementById('docTax').innerText = `$${tax.toLocaleString()}`;
+      document.getElementById('docGrandTotal').innerText = `$${grandTotal.toLocaleString()}`;
 
-      let html = `
-        <div class="border-b border-slate-800 pb-2 mb-3 flex justify-between items-start">
-          <div>
-            <div class="flex items-center space-x-2">
-              <p class="text-amber-400 font-bold">${currentEstimate.company_name}</p>
-              <span class="bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[9px] px-1.5 py-0.5 rounded font-mono font-bold">${currentEstimate.order_number}</span>
-            </div>
-            <p class="text-[10px] text-slate-400">Client: ${currentEstimate.client_name} (${currentEstimate.client_address})</p>
-            <p class="text-[9px] text-amber-500 font-mono mt-0.5">Area: ${currentEstimate.room_category}</p>
-          </div>
-          <div class="text-right">
-            <span class="text-[10px] text-slate-400 block">${currentEstimate.created_date}</span>
-            <span class="text-[9px] text-slate-500 font-mono">${currentEstimate.created_time}</span>
-          </div>
-        </div>
-      `;
-      
-      currentEstimate.line_items.forEach((item, index) => {
-        html += `<div class="flex items-center justify-between border-b border-slate-900/50 pb-2 mb-2 gap-2">
-          <div class="flex-1">
-            <span class="text-amber-500 font-mono text-[10px] block">[${item.category}]</span> 
-            <input type="text" value="${item.description}" onchange="updateItemDesc(${index}, this.value)" class="w-full bg-slate-900 text-slate-200 border border-slate-800 rounded px-1.5 py-0.5 text-xs mt-0.5 focus:outline-none focus:border-amber-500">
-          </div>
-          <div class="w-20 text-right">
-            <span class="text-[10px] text-slate-500 block">Total ($)</span>
-            <input type="number" value="${item.total_cost}" onchange="updateItemCost(${index}, this.value)" class="w-full bg-slate-900 text-emerald-400 font-bold border border-slate-800 rounded px-1.5 py-0.5 text-xs text-right focus:outline-none focus:border-amber-500">
-          </div>
-          <button onclick="removeLineItem(${index})" class="text-rose-400 hover:text-rose-300 px-1 py-1 text-xs mt-3" title="Delete item">🗑️</button>
-        </div>`;
-      });
-
-      html += `<div class="pt-2 text-xs space-y-1 border-t border-slate-800 mt-3 text-slate-400">
-        <div class="flex justify-between"><span>${t.subtotal}</span><span>$${subtotal}</span></div>
-        <div class="flex justify-between"><span>${t.contingency}</span><span>$${contingency}</span></div>
-        <div class="flex justify-between"><span>${t.tax}</span><span>$${tax}</span></div>
-        <div class="flex justify-between font-bold text-slate-100 pt-1 border-t border-slate-900 text-sm">
-          <span>${t.grandTotal}</span>
-          <span class="text-amber-400">$${grand_total}</span>
-        </div>
-      </div>`;
-
+      // Handle photo display on document
+      const photoBox = document.getElementById('docPhotoContainer');
+      const photoImg = document.getElementById('docSitePhotoImg');
       if (currentSitePhoto) {
-        html += `
-          <div class="mt-3 pt-3 border-t border-slate-800">
-            <p class="text-[10px] text-slate-400 font-semibold mb-1">${t.sitePhotoLabel}</p>
-            <img src="${currentSitePhoto}" class="max-h-40 w-auto rounded border border-slate-800 object-contain">
-          </div>
-        `;
+        photoImg.src = currentSitePhoto;
+        photoBox.classList.remove('hidden');
+      } else {
+        photoBox.classList.add('hidden');
       }
-
-      const sigDataUrl = canvas ? canvas.toDataURL() : null;
-      html += `
-        <div class="mt-4 pt-3 border-t border-slate-800 text-[10px] text-slate-400 space-y-2">
-          <p class="font-semibold text-slate-300">${t.termsTitle}</p>
-          <p>${t.termsText}</p>
-          <div class="pt-3 grid grid-cols-2 gap-4 items-end">
-            <div><span class="text-[9px] text-slate-500 block border-b border-slate-700 pb-4">${t.contractorSig}</span></div>
-            <div>
-              ${canvas ? `<img src="${sigDataUrl}" class="h-10 border-b border-slate-700 pb-1">` : `<div class="border-b border-slate-700 pb-6"></div>`}
-              <span class="text-[9px] text-slate-500 block pt-1">${t.clientSig}</span>
-            </div>
-          </div>
-        </div>
-      `;
-
-      container.innerHTML = html;
     }
 
-    function updateItemCost(index, newCost) {
-      currentEstimate.line_items[index].total_cost = parseFloat(newCost) || 0;
+    function updateItemCost(index, value) {
+      currentEstimate.items[index].totalCost = parseFloat(value) || 0;
       renderEstimateUI();
     }
 
-    function updateItemDesc(index, newDesc) {
-      currentEstimate.line_items[index].description = newDesc;
+    function updateItemDesc(index, value) {
+      currentEstimate.items[index].description = value;
     }
 
     function addNewLineItem() {
       if (!currentEstimate) return;
-      currentEstimate.line_items.push({
-        category: currentEstimate.room_category || "General",
-        description: currentLang === 'es' ? "Nuevo ítem personalizado" : "New custom work item",
+      currentEstimate.items.push({
+        category: currentEstimate.roomCategory || "General",
+        description: currentLang === 'es' ? "Nuevo ítem de trabajo" : "New scope line item",
         quantity: 1,
-        unit_cost: 150,
-        total_cost: 150
+        unitCost: 150,
+        totalCost: 150
       });
       renderEstimateUI();
     }
 
     function removeLineItem(index) {
       if (!currentEstimate) return;
-      currentEstimate.line_items.splice(index, 1);
+      currentEstimate.items.splice(index, 1);
       renderEstimateUI();
     }
 
-    // --- SAVE & HISTORY ---
+    /* EXPORT & PDF GENERATION */
+    function downloadPDF() {
+      if (!currentEstimate) return;
+      const element = document.getElementById('printableDocument');
+      const opt = {
+        margin: 0.3,
+        filename: `Proposal_${currentEstimate.orderNumber}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, backgroundColor: '#020617' },
+        jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+      };
+
+      html2pdf().set(opt).from(element).save();
+    }
+
+    function shareProposal() {
+      if (!currentEstimate) return;
+      const text = `*Proposal #${currentEstimate.orderNumber}*\nCompany: ${currentEstimate.companyName}\nClient: ${currentEstimate.clientName}\nGrand Total: $${currentEstimate.grandTotal.toLocaleString()}\n\nGenerated with JobSight AI`;
+
+      if (navigator.share) {
+        navigator.share({ title: `Proposal #${currentEstimate.orderNumber}`, text: text }).catch(() => {});
+      } else {
+        copyToClipboard(text);
+        showToast(translations[currentLang].toastCopied);
+      }
+    }
+
+    function copyToClipboard(text) {
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+    }
+
+    /* STORAGE & HISTORY */
     async function saveEstimate() {
       if (!currentEstimate) return;
 
-      const sigImage = canvas ? canvas.toDataURL() : null;
-      const record = { ...currentEstimate, site_photo: currentSitePhoto, client_signature: sigImage, timestamp: Date.now() };
+      const sigImg = sigCanvas ? sigCanvas.toDataURL() : null;
+      const record = {
+        ...currentEstimate,
+        sitePhoto: currentSitePhoto,
+        signature: sigImg,
+        savedAt: Date.now()
+      };
 
-      let localHistory = JSON.parse(localStorage.getItem('jobsight_estimates') || '[]');
-      localHistory.unshift(record);
-      localStorage.setItem('jobsight_estimates', JSON.stringify(localHistory));
+      // Local storage persistence
+      let history = JSON.parse(localStorage.getItem('jobsight_records') || '[]');
+      history.unshift(record);
+      localStorage.setItem('jobsight_records', JSON.stringify(history));
 
+      // Supabase remote persistence
       if (supabaseClient) {
         try {
           await supabaseClient.from('estimates').insert([{ estimate_data: record }]);
         } catch (e) {}
       }
 
-      alert(currentLang === 'es' ? "¡Presupuesto guardado con éxito!" : "Estimate successfully saved!");
+      showToast(translations[currentLang].toastSaved);
     }
 
     async function fetchHistory() {
-      const container = document.getElementById("historyContainer");
-      let allRecords = [];
+      const container = document.getElementById('historyListContainer');
+      const localData = JSON.parse(localStorage.getItem('jobsight_records') || '[]');
 
-      const localHistory = JSON.parse(localStorage.getItem('jobsight_estimates') || '[]');
-      allRecords = [...localHistory];
-
-      if (supabaseClient) {
-        try {
-          const { data } = await supabaseClient.from('estimates').select('*').order('created_at', { ascending: false });
-          if (data) {
-            data.forEach(row => { if (row.estimate_data) allRecords.push(row.estimate_data); });
-          }
-        } catch (e) {}
+      if (localData.length === 0) {
+        container.innerHTML = `<p class="text-xs text-slate-500 italic py-4 text-center">${translations[currentLang].noHistoryLbl}</p>`;
+        return;
       }
 
-      if (allRecords.length > 0) {
-        let
+      container.innerHTML = '';
+      localData.forEach((rec) => {
+        const item = document.createElement('div');
+        item.className = "bg-slate-950 p-3 rounded-xl border border-slate-800 flex items-center justify-between";
+        item.innerHTML = `
+          <div>
+            <div class="flex items-center space-x-2">
+              <span class="font-bold text-amber-400 text-xs">${rec.companyName}</span>
+              <span class="bg-amber-500/10 border border-amber-500/20 text-amber-400 font-mono text-[9px] px-1.5 py-0.5 rounded font-bold">#${rec.orderNumber || 'JS-0000'}</span>
+            </div>
+            <p class="text-[10px] text-slate-400 mt-0.5">${rec.clientName} - ${rec.clientAddress}</p>
+            <span class="text-[9px] text-slate-500">${rec.createdDate || ''}</span>
+          </div>
+          <div class="text-right">
+            <span class="font-bold text-emerald-400 text-xs block">$${(rec.grandTotal || 0).toLocaleString()}</span>
+          </div>
+        `;
+        container.appendChild(item);
+      });
+    }
+
+    /* UI TOAST ALERT */
+    function showToast(message, type = "success") {
+      const toast = document.getElementById('toastNotification');
+      const msg = document.getElementById('toastMessage');
+      msg.innerText = message;
+      toast.classList.remove('hidden', 'translate-y-2');
+
+      setTimeout(() => {
+        toast.classList.add('hidden', 'translate-y-2');
+      }, 3000);
+    }
+  </script>
+</body>
+</html>
