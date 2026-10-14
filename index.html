@@ -1,134 +1,118 @@
 <!DOCTYPE html>
-<html lang="en" class="h-full bg-slate-950 text-slate-100 antialiased selection:bg-amber-500 selection:text-slate-950">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>JobSight AI - Field OS</title>
   
   <link rel="manifest" href="manifest.json">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="theme-color" content="#020617">
 
   <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            brand: { 400: '#fbbf24', 500: '#f59e0b', 600: '#d97706' }
-          }
-        }
-      }
-    }
-  </script>
-
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
   <style>
-    /* CRITICAL FIX FOR HIGH-DENSITY ANDROID SCREENS (SAMSUNG S23+) */
-    :root {
+    /* Force Android to respect device scale and prevent automatic shrinkage */
+    html {
       -webkit-text-size-adjust: 100%;
       text-size-adjust: 100%;
     }
-
-    html {
-      font-size: clamp(16px, 4.5vw, 18px) !important; /* Forces large base scaling on mobile */
-      overflow-x: hidden;
-      width: 100%;
-    }
-
+    
     body {
+      font-size: 16px;
+      background-color: #020617;
+      color: #f8fafc;
+      margin: 0;
+      padding: 0;
       overflow-x: hidden;
-      width: 100%;
-      touch-action: manipulation;
     }
 
-    /* Force readable sizes for all inputs and buttons on Android */
+    /* Larger touch-friendly inputs for mobile */
     input, select, textarea, button {
-      font-size: 1rem !important;
-      min-height: 48px; /* Standard Android Touch Target */
+      font-size: 16px !important;
       -webkit-tap-highlight-color: transparent;
     }
 
-    textarea {
-      min-height: 120px;
+    input[type="text"], input[type="number"], select, textarea {
+      background-color: #090d16;
+      border: 1px solid #1e293b;
+      color: #f8fafc;
+      border-radius: 0.75rem;
+      padding: 0.75rem;
+      width: 100%;
+      outline: none;
+    }
+
+    input:focus, select:focus, textarea:focus {
+      border-color: #f59e0b;
     }
 
     canvas { touch-action: none; }
   </style>
 </head>
-<body class="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-between overflow-x-hidden">
+<body class="min-h-screen flex flex-col justify-between">
 
   <!-- Header -->
-  <header class="sticky top-0 z-40 bg-slate-950/95 backdrop-blur-md border-b border-slate-800/80 px-4 py-3">
-    <div class="max-w-4xl mx-auto flex flex-col space-y-3">
-      
-      <div class="flex items-center justify-between w-full">
-        <div class="flex items-center space-x-2.5 min-w-0">
-          <div class="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center shrink-0">
-            <span class="text-xl">🛠️</span>
-          </div>
-          <div class="truncate">
-            <div class="flex items-center space-x-2">
-              <h1 class="text-lg font-extrabold tracking-tight text-amber-500 leading-tight">JobSight AI</h1>
-              <span class="bg-slate-800 border border-slate-700 text-slate-400 text-[10px] font-mono px-1.5 py-0.5 rounded">v2.7</span>
-            </div>
-            <p id="subHeader" class="text-xs text-slate-400 truncate">Field Operations & Estimate Engine</p>
-          </div>
+  <header class="sticky top-0 z-40 bg-slate-950/95 backdrop-blur border-b border-slate-800 p-3">
+    <div class="max-w-3xl mx-auto flex items-center justify-between gap-2">
+      <div class="flex items-center space-x-2 min-w-0">
+        <div class="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center shrink-0">
+          <span class="text-lg">🛠️</span>
         </div>
-
-        <!-- Language & Navigation Controls -->
-        <div class="flex items-center space-x-2 shrink-0">
-          <select id="langSelect" onchange="switchLanguage(this.value)" class="bg-slate-900 border border-slate-800 text-amber-400 text-sm font-bold px-3 py-2 rounded-xl focus:outline-none focus:border-amber-500">
-            <option value="en">🇺🇸 EN</option>
-            <option value="es">🇪🇸 ES</option>
-          </select>
-
-          <nav class="flex bg-slate-900 p-1 rounded-xl border border-slate-800 shadow-inner">
-            <button onclick="switchTab('generator')" id="tabGenBtn" class="bg-amber-500 text-slate-950 text-xs font-bold px-3 py-2 rounded-lg shadow">Gen</button>
-            <button onclick="switchTab('history')" id="tabHistBtn" class="text-slate-400 hover:text-slate-200 text-xs font-semibold px-3 py-2 rounded-lg">History</button>
-          </nav>
+        <div class="truncate">
+          <h1 class="text-base font-bold text-amber-500 leading-tight">JobSight AI</h1>
+          <p id="subHeader" class="text-[11px] text-slate-400 truncate">Field Operations Engine</p>
         </div>
       </div>
 
+      <div class="flex items-center space-x-2 shrink-0">
+        <select id="langSelect" onchange="switchLanguage(this.value)" class="!w-auto bg-slate-900 text-amber-400 text-xs font-bold px-2 py-1.5 rounded-lg">
+          <option value="en">🇺🇸 EN</option>
+          <option value="es">🇪🇸 ES</option>
+        </select>
+        <div class="flex bg-slate-900 p-1 rounded-lg border border-slate-800">
+          <button onclick="switchTab('generator')" id="tabGenBtn" class="bg-amber-500 text-slate-950 text-xs font-bold px-2.5 py-1 rounded-md">Gen</button>
+          <button onclick="switchTab('history')" id="tabHistBtn" class="text-slate-400 text-xs font-semibold px-2.5 py-1 rounded-md">History</button>
+        </div>
+      </div>
     </div>
   </header>
 
-  <!-- Main Body Container -->
-  <main class="flex-1 max-w-4xl w-full mx-auto p-4 space-y-5">
+  <!-- Main Container -->
+  <main class="flex-1 max-w-3xl w-full mx-auto p-3 space-y-4">
 
     <!-- TAB 1: GENERATOR -->
-    <div id="generatorTab" class="space-y-5">
+    <div id="generatorTab" class="space-y-4">
       
-      <!-- Section 1: Proposal Details -->
-      <div class="bg-slate-900 p-5 rounded-2xl border border-slate-800 shadow-xl space-y-4">
-        <div class="flex items-center space-x-2 border-b border-slate-800/80 pb-3">
-          <span class="text-amber-500 font-mono text-sm font-bold">01.</span>
-          <h2 id="lblDetailsTitle" class="text-sm font-extrabold tracking-wide text-amber-400 uppercase">Proposal Details</h2>
+      <!-- Section 1 -->
+      <div class="bg-slate-900 p-4 rounded-2xl border border-slate-800 space-y-3 shadow-lg">
+        <div class="flex items-center space-x-2 border-b border-slate-800 pb-2">
+          <span class="text-amber-500 font-mono text-xs font-bold">01.</span>
+          <h2 id="lblDetailsTitle" class="text-xs font-bold text-amber-400 uppercase tracking-wide">Proposal Details</h2>
         </div>
 
-        <div class="space-y-4">
+        <div class="space-y-3">
           <div>
-            <label id="lblCompany" class="text-xs text-slate-400 font-medium block mb-1.5">Contractor / Company Name</label>
-            <input type="text" id="companyNameInput" value="ProBuild Services" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-3 text-slate-200 focus:outline-none focus:border-amber-500">
+            <label id="lblCompany" class="text-xs text-slate-400 block mb-1">Company Name</label>
+            <input type="text" id="companyNameInput" value="ProBuild Services">
           </div>
 
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="grid grid-cols-1 gap-3">
             <div>
-              <label id="lblClient" class="text-xs text-slate-400 font-medium block mb-1.5">Client Name</label>
-              <input type="text" id="clientNameInput" value="John Smith" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-3 text-slate-200 focus:outline-none focus:border-amber-500">
+              <label id="lblClient" class="text-xs text-slate-400 block mb-1">Client Name</label>
+              <input type="text" id="clientNameInput" value="John Smith">
             </div>
             <div>
-              <label id="lblAddress" class="text-xs text-slate-400 font-medium block mb-1.5">Property / Job Address</label>
-              <input type="text" id="clientAddressInput" value="123 Maple Street, Austin TX" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-3 text-slate-200 focus:outline-none focus:border-amber-500">
+              <label id="lblAddress" class="text-xs text-slate-400 block mb-1">Job Address</label>
+              <input type="text" id="clientAddressInput" value="123 Maple Street, Austin TX">
             </div>
           </div>
 
           <div>
-            <label id="lblArea" class="text-xs text-slate-400 font-medium block mb-1.5">Job Area / Room Focus</label>
-            <select id="roomCategorySelect" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-3 text-amber-400 font-bold focus:outline-none focus:border-amber-500">
+            <label id="lblArea" class="text-xs text-slate-400 block mb-1">Job Area / Focus</label>
+            <select id="roomCategorySelect" class="text-amber-400 font-bold">
               <option value="General & Whole House">General / Whole House</option>
               <option value="Kitchen Remodel">Kitchen / Cocina</option>
               <option value="Master Bathroom">Bathroom / Baño</option>
@@ -139,22 +123,20 @@
         </div>
       </div>
 
-      <!-- Section 2: Walkthrough Notes -->
-      <div class="bg-slate-900 p-5 rounded-2xl border border-slate-800 shadow-xl space-y-4">
-        <div class="flex items-center justify-between flex-wrap gap-3 border-b border-slate-800/80 pb-3">
+      <!-- Section 2 -->
+      <div class="bg-slate-900 p-4 rounded-2xl border border-slate-800 space-y-3 shadow-lg">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-2">
           <div class="flex items-center space-x-2">
-            <span class="text-amber-500 font-mono text-sm font-bold">02.</span>
-            <h2 id="lblNotesTitle" class="text-sm font-extrabold tracking-wide text-slate-200 uppercase">Site Walkthrough Notes</h2>
+            <span class="text-amber-500 font-mono text-xs font-bold">02.</span>
+            <h2 id="lblNotesTitle" class="text-xs font-bold text-slate-200 uppercase tracking-wide">Walkthrough Notes</h2>
           </div>
-          
-          <div class="flex items-center space-x-2">
-            <label class="bg-slate-800 hover:bg-slate-700 text-amber-400 text-xs font-bold px-3 py-2.5 rounded-xl cursor-pointer flex items-center space-x-1.5 border border-slate-700">
+          <div class="flex space-x-1.5">
+            <label class="bg-slate-800 text-amber-400 text-xs font-bold px-2.5 py-1.5 rounded-lg cursor-pointer flex items-center space-x-1">
               <span>📷</span>
               <span id="lblAddPhoto">Photo</span>
               <input type="file" id="cameraInput" accept="image/*" capture="environment" onchange="handlePhotoUpload(event)" class="hidden">
             </label>
-            
-            <button id="micBtn" onclick="toggleVoiceRecording()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold px-3.5 py-2.5 rounded-xl flex items-center space-x-1.5 border border-slate-700">
+            <button id="micBtn" onclick="toggleVoiceRecording()" class="bg-slate-800 text-slate-300 text-xs font-bold px-2.5 py-1.5 rounded-lg flex items-center space-x-1">
               <span>🎙️</span>
               <span id="lblVoice">Voice</span>
             </button>
@@ -162,43 +144,37 @@
         </div>
 
         <div id="photoPreviewWrapper" class="hidden relative inline-block">
-          <img id="photoPreview" class="h-20 w-20 object-cover rounded-xl border border-amber-500 shadow">
-          <button onclick="removePhoto()" class="absolute -top-2.5 -right-2.5 bg-rose-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold shadow">✕</button>
+          <img id="photoPreview" class="h-16 w-16 object-cover rounded-xl border border-amber-500">
+          <button onclick="removePhoto()" class="absolute -top-2 -right-2 bg-rose-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold">✕</button>
         </div>
         
-        <div>
-          <textarea id="notesInput" rows="4" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3.5 text-slate-200 focus:outline-none focus:border-amber-500 leading-relaxed" placeholder="Type or dictate notes...&#10;Ex: Demo old cabinets, install 100 sq ft tile, run new supply lines."></textarea>
-        </div>
+        <textarea id="notesInput" rows="4" placeholder="Type or dictate notes...&#10;Ex: Demo old cabinets, install 100 sq ft tile."></textarea>
 
-        <button id="btnGenerate" onclick="generateEstimate()" class="w-full bg-gradient-to-r from-amber-500 to-amber-600 active:scale-[0.99] text-slate-950 font-extrabold py-4 rounded-xl text-sm uppercase tracking-wider shadow-lg">
+        <button id="btnGenerate" onclick="generateEstimate()" class="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold py-3.5 rounded-xl text-sm shadow-md uppercase tracking-wider">
           Generate Instant Estimate
         </button>
       </div>
 
-      <!-- Section 3: Itemized Proposal Output -->
-      <div id="outputWrapper" class="hidden bg-slate-900 p-5 rounded-2xl border border-slate-800 shadow-2xl space-y-5">
-        
-        <div class="flex items-center justify-between border-b border-slate-800 pb-3 flex-wrap gap-2">
+      <!-- Section 3: Output Proposal -->
+      <div id="outputWrapper" class="hidden bg-slate-900 p-4 rounded-2xl border border-slate-800 space-y-4 shadow-xl">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-2">
           <div class="flex items-center space-x-2">
-            <span class="text-amber-500 font-mono text-sm font-bold">03.</span>
-            <h2 id="lblProposalTitle" class="text-sm font-extrabold tracking-wide text-slate-200 uppercase">Itemized Proposal</h2>
+            <span class="text-amber-500 font-mono text-xs font-bold">03.</span>
+            <h2 id="lblProposalTitle" class="text-xs font-bold text-slate-200 uppercase tracking-wide">Itemized Proposal</h2>
           </div>
-          <button id="btnAddItem" onclick="addNewLineItem()" class="bg-slate-800 hover:bg-slate-700 text-amber-400 text-xs font-bold px-3 py-2 rounded-xl border border-slate-700">
-            + Add Item
-          </button>
+          <button id="btnAddItem" onclick="addNewLineItem()" class="bg-slate-800 text-amber-400 text-xs font-bold px-2.5 py-1 rounded-lg">+ Item</button>
         </div>
 
-        <div id="outputContainer" class="space-y-4 bg-slate-950 p-4 rounded-xl border border-slate-800 overflow-hidden"></div>
+        <div id="outputContainer" class="space-y-3 text-xs bg-slate-950 p-3 rounded-xl border border-slate-800"></div>
 
         <!-- Signature Pad -->
-        <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2.5">
+        <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2">
           <div class="flex items-center justify-between">
             <span id="lblSigTitle" class="text-xs font-bold text-slate-300">Client Signature Approval</span>
             <button id="lblClearSig" onclick="clearSignature()" class="text-xs text-rose-400 underline font-semibold">Clear</button>
           </div>
-          
-          <div class="border border-slate-800 rounded-xl bg-white overflow-hidden touch-none relative shadow-sm">
-            <canvas id="sigCanvas" class="w-full h-32 cursor-crosshair block"></canvas>
+          <div class="border border-slate-800 rounded-xl bg-white overflow-hidden touch-none relative">
+            <canvas id="sigCanvas" class="w-full h-28 block"></canvas>
             <div id="sigPlaceholder" class="absolute inset-0 flex items-center justify-center pointer-events-none text-slate-400 text-xs italic">
               Sign here with finger or stylus
             </div>
@@ -206,31 +182,25 @@
         </div>
 
         <!-- Action Buttons -->
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <button id="btnPdf" onclick="downloadPDF()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold py-3.5 rounded-xl text-xs transition border border-slate-700">
-            📄 Export PDF
-          </button>
-          <button id="btnShare" onclick="shareProposal()" class="bg-sky-600 hover:bg-sky-500 text-white font-bold py-3.5 rounded-xl text-xs transition">
-            📤 Share
-          </button>
-          <button id="btnSave" onclick="saveEstimate()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3.5 rounded-xl text-xs transition">
-            💾 Save Local
-          </button>
+        <div class="grid grid-cols-1 gap-2.5 pt-1">
+          <button id="btnPdf" onclick="downloadPDF()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold py-3 rounded-xl text-xs">📄 Export PDF</button>
+          <div class="grid grid-cols-2 gap-2">
+            <button id="btnShare" onclick="shareProposal()" class="bg-sky-600 hover:bg-sky-500 text-white font-bold py-3 rounded-xl text-xs">📤 Share</button>
+            <button id="btnSave" onclick="saveEstimate()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl text-xs">💾 Save Local</button>
+          </div>
         </div>
-
       </div>
 
     </div>
 
     <!-- TAB 2: HISTORY -->
     <div id="historyTab" class="hidden space-y-4">
-      <div class="bg-slate-900 p-5 rounded-2xl border border-slate-800 shadow-xl space-y-4">
-        <div class="flex items-center justify-between border-b border-slate-800 pb-3">
-          <h2 id="lblHistoryTitle" class="text-sm font-extrabold tracking-wide text-slate-200 uppercase">Saved Estimates</h2>
+      <div class="bg-slate-900 p-4 rounded-2xl border border-slate-800 space-y-3 shadow-lg">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+          <h2 id="lblHistoryTitle" class="text-xs font-bold text-slate-200 uppercase">Saved Estimates</h2>
           <button id="lblRefresh" onclick="fetchHistory()" class="text-xs text-amber-500 underline font-semibold">Refresh</button>
         </div>
-        
-        <div id="historyContainer" class="space-y-3">
+        <div id="historyContainer" class="space-y-2.5">
           <p id="lblNoHistory" class="text-slate-500 italic text-center py-6 text-xs">Click refresh to load history...</p>
         </div>
       </div>
@@ -238,38 +208,34 @@
 
   </main>
 
-  <footer class="border-t border-slate-900 bg-slate-950 py-4 text-center text-slate-600 text-xs">
-    <p>JobSight AI Field OS &bull; Touch & Screen Optimized</p>
+  <footer class="border-t border-slate-900 bg-slate-950 py-3 text-center text-slate-600 text-[11px]">
+    <p>JobSight AI Field OS &bull; Mobile Optimized</p>
   </footer>
 
   <script>
     const translations = {
       en: {
-        subHeader: "Field Operations & Estimate Engine",
+        subHeader: "Field Operations Engine",
         tabGen: "Gen",
         tabHist: "History",
         detailsTitle: "Proposal Details",
-        company: "Contractor / Company Name",
+        company: "Company Name",
         client: "Client Name",
-        address: "Property / Job Address",
-        area: "Job Area / Room Focus",
-        notesTitle: "Site Walkthrough Notes",
+        address: "Job Address",
+        area: "Job Area / Focus",
+        notesTitle: "Walkthrough Notes",
         addPhoto: "Photo",
         voice: "Voice",
-        notesPlaceholder: "Type or dictate notes...\nEx: Demo old cabinets, install 100 sq ft tile, run new supply lines.",
         generate: "Generate Instant Estimate",
         proposalTitle: "Itemized Proposal",
-        addItem: "+ Add Item",
+        addItem: "+ Item",
         sigTitle: "Client Signature Approval",
         clearSig: "Clear",
-        btnPdf: "📄 Export PDF",
-        btnShare: "📤 Share",
-        btnSave: "💾 Save Local",
         historyTitle: "Saved Estimates",
         refresh: "Refresh",
         noHistory: "Click refresh to load history...",
         termsTitle: "Terms & Conditions:",
-        termsText: "Payment due upon completion. Valid for 30 days. Unforeseen structural damage billed separately.",
+        termsText: "Payment due upon completion. Valid for 30 days.",
         contractorSig: "Contractor Signature",
         clientSig: "Client Approval Signature",
         subtotal: "Subtotal:",
@@ -280,31 +246,27 @@
         sigPlaceholder: "Sign here with finger or stylus"
       },
       es: {
-        subHeader: "Motor de Operaciones y Presupuestos",
+        subHeader: "Motor de Operaciones",
         tabGen: "Gen",
         tabHist: "Historial",
         detailsTitle: "Detalles de Propuesta",
         company: "Nombre de la Empresa",
         client: "Nombre del Cliente",
-        address: "Dirección de la Propiedad",
+        address: "Dirección del Trabajo",
         area: "Área de Trabajo",
         notesTitle: "Notas de Inspección",
         addPhoto: "Foto",
         voice: "Voz",
-        notesPlaceholder: "Escriba o dicte las notas...\nEj: Demoler gabinetes, instalar 100 pies cuadrados de azulejo.",
         generate: "Generar Presupuesto",
         proposalTitle: "Propuesta Detallada",
-        addItem: "+ Añadir",
+        addItem: "+ Ítem",
         sigTitle: "Firma y Aprobación del Cliente",
         clearSig: "Borrar",
-        btnPdf: "📄 Exportar PDF",
-        btnShare: "📤 Compartir",
-        btnSave: "💾 Guardar Local",
         historyTitle: "Presupuestos Guardados",
         refresh: "Actualizar",
         noHistory: "Haga clic en actualizar...",
         termsTitle: "Términos y Condiciones:",
-        termsText: "Pago vencido al finalizar. Válido por 30 días. Daños imprevistos se facturan por separado.",
+        termsText: "Pago vencido al finalizar. Válido por 30 días.",
         contractorSig: "Firma del Contratista",
         clientSig: "Firma del Cliente",
         subtotal: "Subtotal:",
@@ -333,7 +295,6 @@
       document.getElementById('lblNotesTitle').innerText = t.notesTitle;
       document.getElementById('lblAddPhoto').innerText = t.addPhoto;
       document.getElementById('lblVoice').innerText = t.voice;
-      document.getElementById('notesInput').placeholder = t.notesPlaceholder;
       document.getElementById('btnGenerate').innerText = t.generate;
       document.getElementById('lblProposalTitle').innerText = t.proposalTitle;
       document.getElementById('btnAddItem').innerText = t.addItem;
@@ -385,7 +346,7 @@
       const tempImg = hasSigned ? canvas.toDataURL() : null;
 
       canvas.width = rect.width || 300;
-      canvas.height = 128;
+      canvas.height = 110;
 
       ctx.strokeStyle = '#020617';
       ctx.lineWidth = 3.0;
@@ -472,7 +433,7 @@
 
         recognition.onstart = () => {
           isRecording = true;
-          micBtn.className = "bg-rose-600 animate-pulse text-white text-xs font-bold px-3 py-2 rounded-xl border border-rose-500 shadow";
+          micBtn.className = "bg-rose-600 animate-pulse text-white text-xs font-bold px-2.5 py-1.5 rounded-lg";
           micBtn.innerHTML = "<span>🔴</span> <span>Rec...</span>";
         };
         recognition.onresult = (event) => {
@@ -497,7 +458,7 @@
       isRecording = false;
       const micBtn = document.getElementById("micBtn");
       if (micBtn) {
-        micBtn.className = "bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold px-3.5 py-2.5 rounded-xl border border-slate-700";
+        micBtn.className = "bg-slate-800 text-slate-300 text-xs font-bold px-2.5 py-1.5 rounded-lg flex items-center space-x-1";
         micBtn.innerHTML = `<span>🎙️</span> <span id="lblVoice">${translations[currentLang].voice}</span>`;
       }
     }
@@ -511,13 +472,13 @@
       if (tab === 'generator') {
         genTab.classList.remove('hidden');
         histTab.classList.add('hidden');
-        genBtn.className = "bg-amber-500 text-slate-950 text-xs font-bold px-3 py-2 rounded-lg shadow";
-        histBtn.className = "text-slate-400 hover:text-slate-200 text-xs font-semibold px-3 py-2 rounded-lg";
+        genBtn.className = "bg-amber-500 text-slate-950 text-xs font-bold px-2.5 py-1 rounded-md";
+        histBtn.className = "text-slate-400 text-xs font-semibold px-2.5 py-1 rounded-md";
       } else {
         genTab.classList.add('hidden');
         histTab.classList.remove('hidden');
-        histBtn.className = "bg-amber-500 text-slate-950 text-xs font-bold px-3 py-2 rounded-lg shadow";
-        genBtn.className = "text-slate-400 hover:text-slate-200 text-xs font-semibold px-3 py-2 rounded-lg";
+        histBtn.className = "bg-amber-500 text-slate-950 text-xs font-bold px-2.5 py-1 rounded-md";
+        genBtn.className = "text-slate-400 text-xs font-semibold px-2.5 py-1 rounded-md";
         fetchHistory();
       }
     }
@@ -601,41 +562,39 @@
       const container = document.getElementById("outputContainer");
 
       let html = `
-        <div class="border-b border-slate-800 pb-3 mb-3 flex justify-between items-start flex-wrap gap-2">
+        <div class="border-b border-slate-800 pb-2.5 mb-3 flex justify-between items-start gap-2">
           <div>
-            <div class="flex items-center space-x-2 flex-wrap">
-              <p class="text-amber-400 font-bold text-sm">${currentEstimate.company_name}</p>
-              <span class="bg-amber-500/10 text-amber-400 border border-amber-500/30 text-[10px] px-2 py-0.5 rounded font-mono font-bold">${currentEstimate.order_number}</span>
+            <div class="flex items-center space-x-1.5 flex-wrap">
+              <p class="text-amber-400 font-bold text-xs">${currentEstimate.company_name}</p>
+              <span class="bg-amber-500/10 text-amber-400 border border-amber-500/30 text-[9px] px-1.5 py-0.5 rounded font-mono font-bold">${currentEstimate.order_number}</span>
             </div>
-            <p class="text-xs text-slate-400 mt-1">Client: <strong class="text-slate-200">${currentEstimate.client_name}</strong></p>
-            <p class="text-xs text-amber-500 font-mono mt-0.5">Area: ${currentEstimate.room_category}</p>
+            <p class="text-[11px] text-slate-400 mt-0.5">Client: <strong class="text-slate-200">${currentEstimate.client_name}</strong></p>
           </div>
           <div class="text-right shrink-0">
-            <span class="text-xs text-slate-400 block">${currentEstimate.created_date}</span>
-            <span class="text-xs text-slate-500 font-mono">${currentEstimate.created_time}</span>
+            <span class="text-[10px] text-slate-400 block">${currentEstimate.created_date}</span>
           </div>
         </div>
       `;
       
       currentEstimate.line_items.forEach((item, index) => {
-        html += `<div class="flex items-center justify-between border-b border-slate-900 pb-3 mb-3 gap-2">
+        html += `<div class="flex items-center justify-between border-b border-slate-900 pb-2.5 mb-2.5 gap-2">
           <div class="flex-1 min-w-0">
-            <span class="text-amber-500 font-mono text-xs block">[${item.category}]</span> 
-            <input type="text" value="${item.description}" onchange="updateItemDesc(${index}, this.value)" class="w-full bg-slate-900 text-slate-200 border border-slate-800 rounded-lg px-2.5 py-2 text-xs mt-1 focus:outline-none focus:border-amber-500">
+            <span class="text-amber-500 font-mono text-[9px] block">[${item.category}]</span> 
+            <input type="text" value="${item.description}" onchange="updateItemDesc(${index}, this.value)" class="w-full bg-slate-900 text-slate-200 border border-slate-800 rounded-lg px-2 py-1.5 text-xs mt-0.5">
           </div>
-          <div class="w-24 text-right shrink-0">
-            <span class="text-xs text-slate-500 block font-medium">Total ($)</span>
-            <input type="number" value="${item.total_cost}" onchange="updateItemCost(${index}, this.value)" class="w-full bg-slate-900 text-emerald-400 font-bold border border-slate-800 rounded-lg px-2 py-2 text-xs text-right focus:outline-none focus:border-amber-500">
+          <div class="w-20 text-right shrink-0">
+            <span class="text-[9px] text-slate-500 block">Total ($)</span>
+            <input type="number" value="${item.total_cost}" onchange="updateItemCost(${index}, this.value)" class="w-full bg-slate-900 text-emerald-400 font-bold border border-slate-800 rounded-lg px-2 py-1.5 text-xs text-right">
           </div>
-          <button onclick="removeLineItem(${index})" class="text-rose-400 p-2 text-sm mt-3 shrink-0">🗑️</button>
+          <button onclick="removeLineItem(${index})" class="text-rose-400 p-1 text-xs mt-3 shrink-0">🗑️</button>
         </div>`;
       });
 
-      html += `<div class="pt-3 text-xs space-y-1.5 border-t border-slate-800 mt-3 text-slate-400">
+      html += `<div class="pt-2 text-xs space-y-1 border-t border-slate-800 mt-2 text-slate-400">
         <div class="flex justify-between"><span>${t.subtotal}</span><span>$${subtotal}</span></div>
         <div class="flex justify-between"><span>${t.contingency}</span><span>$${contingency}</span></div>
         <div class="flex justify-between"><span>${t.tax}</span><span>$${tax}</span></div>
-        <div class="flex justify-between font-extrabold text-slate-100 pt-2 border-t border-slate-800 text-sm">
+        <div class="flex justify-between font-bold text-slate-100 pt-1 border-t border-slate-800 text-sm">
           <span>${t.grandTotal}</span>
           <span class="text-amber-400">$${grand_total}</span>
         </div>
@@ -643,23 +602,23 @@
 
       if (currentSitePhoto) {
         html += `
-          <div class="mt-4 pt-3 border-t border-slate-800">
-            <p class="text-xs text-slate-400 font-semibold mb-1.5">${t.sitePhotoLabel}</p>
-            <img src="${currentSitePhoto}" class="max-h-40 w-auto rounded-xl border border-slate-800 object-contain">
+          <div class="mt-3 pt-2.5 border-t border-slate-800">
+            <p class="text-[10px] text-slate-400 font-semibold mb-1">${t.sitePhotoLabel}</p>
+            <img src="${currentSitePhoto}" class="max-h-36 w-auto rounded border border-slate-800 object-contain">
           </div>
         `;
       }
 
       const sigDataUrl = (canvas && hasSigned) ? canvas.toDataURL() : null;
       html += `
-        <div class="mt-4 pt-3 border-t border-slate-800 text-xs text-slate-400 space-y-2">
-          <p class="font-bold text-slate-300">${t.termsTitle}</p>
-          <p class="leading-relaxed text-xs">${t.termsText}</p>
-          <div class="pt-3 grid grid-cols-2 gap-4 items-end">
-            <div><span class="text-xs text-slate-500 block border-b border-slate-700 pb-5 font-medium">${t.contractorSig}</span></div>
+        <div class="mt-3 pt-2.5 border-t border-slate-800 text-[10px] text-slate-400 space-y-2">
+          <p class="font-semibold text-slate-300">${t.termsTitle}</p>
+          <p class="leading-snug">${t.termsText}</p>
+          <div class="pt-2.5 grid grid-cols-2 gap-3 items-end">
+            <div><span class="text-[9px] text-slate-500 block border-b border-slate-700 pb-4">${t.contractorSig}</span></div>
             <div>
-              ${sigDataUrl ? `<img src="${sigDataUrl}" class="h-10 border-b border-slate-700 pb-1">` : `<div class="border-b border-slate-700 pb-5"></div>`}
-              <span class="text-xs text-slate-500 block pt-1 font-medium">${t.clientSig}</span>
+              ${sigDataUrl ? `<img src="${sigDataUrl}" class="h-8 border-b border-slate-700 pb-1">` : `<div class="border-b border-slate-700 pb-4"></div>`}
+              <span class="text-[9px] text-slate-500 block pt-1">${t.clientSig}</span>
             </div>
           </div>
         </div>
@@ -725,20 +684,20 @@
       if (allRecords.length > 0) {
         let html = '';
         allRecords.forEach(est => {
-          html += `<div class="bg-slate-950 p-4 rounded-xl border border-slate-800 flex justify-between items-center gap-2">
+          html += `<div class="bg-slate-950 p-3 rounded-xl border border-slate-800 flex justify-between items-center gap-2">
             <div>
-              <div class="flex items-center space-x-2">
+              <div class="flex items-center space-x-1.5">
                 <p class="font-bold text-amber-400 text-xs">${est.company_name} - ${est.client_name}</p>
-                <span class="bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[10px] px-1.5 py-0.5 rounded font-mono font-bold">${est.order_number || '#JS-0000'}</span>
+                <span class="bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[9px] px-1 py-0.5 rounded font-mono">${est.order_number || '#JS-0000'}</span>
               </div>
-              <p class="text-xs text-slate-400 mt-1">${est.client_address}</p>
+              <p class="text-[10px] text-slate-400 mt-0.5">${est.client_address}</p>
             </div>
-            <span class="font-extrabold text-emerald-400 text-sm">$${est.summary?.grand_total || 0}</span>
+            <span class="font-extrabold text-emerald-400 text-xs">$${est.summary?.grand_total || 0}</span>
           </div>`;
         });
         container.innerHTML = html;
       } else {
-        container.innerHTML = `<p class="text-slate-500 italic text-center py-6 text-xs">${translations[currentLang].noHistory}</p>`;
+        container.innerHTML = `<p class="text-slate-500 italic text-center py-4 text-xs">${translations[currentLang].noHistory}</p>`;
       }
     }
 
