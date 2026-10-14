@@ -133,7 +133,7 @@
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label id="lblCompany" class="text-xs text-slate-400 block mb-1">Company Name</label>
-              <input type="text" id="companyNameInput" value="ProBuild Services">
+              <input type="text" id="companyNameInput" value="ProBuild Services" onchange="if(currentEstimate) renderEstimateUI()">
             </div>
             <div>
               <label class="text-xs text-slate-400 block mb-1">Company Logo</label>
@@ -571,6 +571,7 @@
         customLogoBase64 = e.target.result;
         localStorage.setItem('jobsight_logo', customLogoBase64);
         applyLogoToHeader(customLogoBase64);
+        if (currentEstimate) renderEstimateUI();
       };
       reader.readAsDataURL(file);
     }
@@ -591,6 +592,7 @@
       document.getElementById('logoPreviewWrapper').classList.remove('flex');
       document.getElementById('logoPreviewWrapper').classList.add('hidden');
       document.getElementById('logoInput').value = '';
+      if (currentEstimate) renderEstimateUI();
     }
 
     function initLeafletMap() {
@@ -890,15 +892,29 @@
       document.getElementById("outputWrapper").classList.remove("hidden");
       const container = document.getElementById("outputContainer");
 
+      const companyNameVal = document.getElementById("companyNameInput")?.value || currentEstimate.company_name;
+      currentEstimate.company_name = companyNameVal;
+
+      // HTML snippet for logo display
+      const logoHtmlDark = customLogoBase64 
+        ? `<img src="${customLogoBase64}" class="w-10 h-10 object-contain rounded-lg border border-amber-500/50 bg-slate-900 p-0.5 shrink-0">` 
+        : '';
+      const logoHtmlLight = customLogoBase64 
+        ? `<img src="${customLogoBase64}" style="max-height: 48px; max-width: 120px; object-fit: contain; margin-right: 12px; vertical-align: middle;">` 
+        : '';
+
       // 1. Render Screen App View (Dark Mode)
       let html = `
-        <div class="border-b border-slate-800 pb-2.5 mb-3 flex justify-between items-start gap-2">
-          <div>
-            <div class="flex items-center space-x-1.5 flex-wrap">
-              <p class="text-amber-400 font-bold text-xs">${currentEstimate.company_name}</p>
-              <span class="bg-amber-500/10 text-amber-400 border border-amber-500/30 text-[9px] px-1.5 py-0.5 rounded font-mono font-bold">${currentEstimate.order_number}</span>
+        <div class="border-b border-slate-800 pb-2.5 mb-3 flex justify-between items-center gap-2">
+          <div class="flex items-center space-x-2.5">
+            ${logoHtmlDark}
+            <div>
+              <div class="flex items-center space-x-1.5 flex-wrap">
+                <p class="text-amber-400 font-bold text-xs">${currentEstimate.company_name}</p>
+                <span class="bg-amber-500/10 text-amber-400 border border-amber-500/30 text-[9px] px-1.5 py-0.5 rounded font-mono font-bold">${currentEstimate.order_number}</span>
+              </div>
+              <p class="text-[11px] text-slate-400 mt-0.5">Client: <strong class="text-slate-200">${currentEstimate.client_name}</strong></p>
             </div>
-            <p class="text-[11px] text-slate-400 mt-0.5">Client: <strong class="text-slate-200">${currentEstimate.client_name}</strong></p>
           </div>
           <div class="text-right shrink-0">
             <span class="text-[10px] text-amber-400 font-bold block">${currentEstimate.created_date}</span>
@@ -972,13 +988,16 @@
       container.innerHTML = html;
       document.getElementById("remainingBalanceDisplay").innerText = `$${remainingBalance.toFixed(2)}`;
 
-      // 2. Render Printable PDF Container (High-Contrast Light Vector Layout)
+      // 2. Render Printable PDF Container with Company Logo
       const pdfContainer = document.getElementById("printablePdfArea");
       let pdfHtml = `
-        <div style="border-bottom: 2px solid #0f172a; padding-bottom: 12px; margin-bottom: 15px; display: flex; justify-content: space-between;">
-          <div>
-            <h2 style="font-size: 20px; font-weight: bold; color: #0f172a; margin: 0;">${currentEstimate.company_name}</h2>
-            <p style="font-size: 11px; color: #475569; margin: 4px 0 0 0;">Order: <strong>${currentEstimate.order_number}</strong> &bull; ${currentEstimate.created_date} at ${currentEstimate.created_time}</p>
+        <div style="border-bottom: 2px solid #0f172a; padding-bottom: 12px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
+          <div style="display: flex; items-center;">
+            ${logoHtmlLight}
+            <div>
+              <h2 style="font-size: 20px; font-weight: bold; color: #0f172a; margin: 0;">${currentEstimate.company_name}</h2>
+              <p style="font-size: 11px; color: #475569; margin: 4px 0 0 0;">Order: <strong>${currentEstimate.order_number}</strong> &bull; ${currentEstimate.created_date} at ${currentEstimate.created_time}</p>
+            </div>
           </div>
           <div style="text-align: right;">
             <p style="font-size: 11px; color: #475569; margin: 0;">Client: <strong>${currentEstimate.client_name}</strong><br>${currentEstimate.client_address}</p>
@@ -1204,7 +1223,7 @@
       fetchHistory();
     }
 
-    // 100% Reliable Native Browser Vector Print Engine
+    // Native Browser Vector Print Engine
     function downloadPDF() {
       if (!currentEstimate) return;
       window.print();
