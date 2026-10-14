@@ -702,18 +702,92 @@
     }
 
     function downloadPDF() {
-      const element = document.getElementById('outputWrapper');
-      if (!element) return;
+      if (!currentEstimate) return;
       
+      const pdfContainer = document.createElement('div');
+      pdfContainer.style.background = '#ffffff';
+      pdfContainer.style.color = '#000000';
+      pdfContainer.style.padding = '30px';
+      pdfContainer.style.fontFamily = 'Arial, sans-serif';
+      pdfContainer.style.fontSize = '12px';
+      pdfContainer.style.width = '700px';
+
+      let itemsHtml = '';
+      let subtotal = currentEstimate.summary.subtotal || 0;
+      let contingency = currentEstimate.summary.estimated_contingency || 0;
+      let tax = currentEstimate.summary.tax || 0;
+      let grandTotal = currentEstimate.summary.grand_total || 0;
+
+      currentEstimate.line_items.forEach(item => {
+        itemsHtml += `
+          <tr style="border-bottom: 1px solid #e2e8f0;">
+            <td style="padding: 10px; color: #000000;">[${item.category}] ${item.description}</td>
+            <td style="padding: 10px; text-align: right; color: #000000; font-weight: bold;">$${item.total_cost}</td>
+          </tr>
+        `;
+      });
+
+      const sigDataUrl = (canvas && hasSigned) ? canvas.toDataURL() : '';
+
+      pdfContainer.innerHTML = `
+        <div style="display: flex; justify-content: space-between; border-bottom: 2px solid #0f172a; padding-bottom: 15px; margin-bottom: 20px;">
+          <div>
+            <h2 style="margin: 0; color: #0f172a; font-size: 20px;">${currentEstimate.company_name}</h2>
+            <p style="margin: 4px 0 0 0; color: #475569; font-size: 11px;">Order: <strong>${currentEstimate.order_number}</strong> | Date: ${currentEstimate.created_date}</p>
+          </div>
+          <div style="text-align: right;">
+            <p style="margin: 0; color: #0f172a; font-size: 14px;"><strong>Client:</strong> ${currentEstimate.client_name}</p>
+            <p style="margin: 4px 0 0 0; color: #475569; font-size: 11px;">${currentEstimate.client_address}</p>
+          </div>
+        </div>
+
+        <h3 style="color: #0f172a; font-size: 14px; text-transform: uppercase; margin-bottom: 10px;">Itemized Estimate</h3>
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+          <thead>
+            <tr style="background-color: #f1f5f9; border-bottom: 2px solid #cbd5e1;">
+              <th style="padding: 10px; text-align: left; color: #0f172a;">Description</th>
+              <th style="padding: 10px; text-align: right; color: #0f172a;">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${itemsHtml}
+          </tbody>
+        </table>
+
+        <div style="width: 250px; margin-left: auto; margin-bottom: 25px; font-size: 13px;">
+          <div style="display: flex; justify-content: space-between; padding: 4px 0; color: #334155;"><span>Subtotal:</span> <span>$${subtotal}</span></div>
+          <div style="display: flex; justify-content: space-between; padding: 4px 0; color: #334155;"><span>Contingency (10%):</span> <span>$${contingency}</span></div>
+          <div style="display: flex; justify-content: space-between; padding: 4px 0; color: #334155;"><span>Est. Tax (8%):</span> <span>$${tax}</span></div>
+          <div style="display: flex; justify-content: space-between; padding: 8px 0; border-top: 2px solid #0f172a; font-weight: bold; color: #0f172a; font-size: 15px;">
+            <span>Grand Total:</span> <span>$${grandTotal}</span>
+          </div>
+        </div>
+
+        ${currentSitePhoto ? `<div style="margin-bottom: 20px;"><p style="font-weight: bold; color: #0f172a; margin-bottom: 5px;">Site Inspection Photo:</p><img src="${currentSitePhoto}" style="max-height: 180px; border-radius: 6px; border: 1px solid #cbd5e1;" /></div>` : ''}
+
+        <div style="border-top: 1px solid #cbd5e1; padding-top: 15px; margin-top: 20px; color: #475569; font-size: 10px;">
+          <p style="font-weight: bold; color: #0f172a; margin-bottom: 4px;">Terms & Conditions:</p>
+          <p style="margin: 0; line-height: 1.4;">Payment due upon completion. This estimate is valid for 30 days from issuance. Any unforeseen structural damage will be billed separately upon client approval.</p>
+          
+          <div style="display: flex; justify-content: space-between; margin-top: 30px; align-items: flex-end;">
+            <div style="width: 45%; border-top: 1px solid #0f172a; padding-top: 5px; color: #0f172a; font-weight: bold;">Contractor Signature</div>
+            <div style="width: 45%;">
+              ${sigDataUrl ? `<img src="${sigDataUrl}" style="height: 45px; display: block; margin-bottom: 2px;" />` : `<div style="height: 45px;"></div>`}
+              <div style="border-top: 1px solid #0f172a; padding-top: 5px; color: #0f172a; font-weight: bold;">Client Approval Signature</div>
+            </div>
+          </div>
+        </div>
+      `;
+
       const opt = {
-        margin: 0.4,
-        filename: `JobSight_Proposal_${currentEstimate?.order_number || Date.now()}.pdf`,
+        margin: 0.3,
+        filename: `JobSight_Proposal_${currentEstimate.order_number}.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, logging: true },
+        html2canvas: { scale: 2, useCORS: true },
         jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
       };
-      
-      html2pdf().set(opt).from(element).save();
+
+      html2pdf().set(opt).from(pdfContainer).save();
     }
 
     function shareProposal() {
