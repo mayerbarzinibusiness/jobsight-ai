@@ -10,7 +10,7 @@
   <!-- html2pdf for client proposals -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen font-sans">
+<body class="bg-slate-950 text-slate-100 min-h-screen font-sans pb-12">
   
   <div class="max-w-md md:max-w-4xl mx-auto p-4 space-y-6">
     
@@ -66,7 +66,13 @@
 
       <!-- Output Panel -->
       <div id="outputWrapper" class="hidden bg-slate-900 p-4 rounded-xl border border-slate-800 space-y-4">
-        <h2 class="text-sm font-semibold text-slate-200">3. Itemized Proposal (Tap prices to edit)</h2>
+        <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+          <h2 class="text-sm font-semibold text-slate-200">3. Itemized Proposal</h2>
+          <button onclick="addNewLineItem()" class="bg-slate-800 hover:bg-slate-700 text-amber-400 text-xs font-semibold px-2.5 py-1 rounded transition">
+            + Add Line Item
+          </button>
+        </div>
+
         <div id="outputContainer" class="space-y-2 text-xs bg-slate-950 p-3 rounded-lg border border-slate-800"></div>
         
         <div class="grid grid-cols-3 gap-2 pt-2">
@@ -87,7 +93,7 @@
     <div id="historyTab" class="hidden space-y-4">
       <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 space-y-3">
         <div class="flex justify-between items-center">
-          <h2 class="text-sm font-semibold text-slate-200">Saved Estimates</h2>
+          <h2 class="text-sm font-semibold text-slate-200">Saved Cloud Estimates</h2>
           <button onclick="fetchHistory()" class="text-xs text-amber-500 hover:underline">Refresh</button>
         </div>
         <div id="historyContainer" class="space-y-3 text-xs">
@@ -99,6 +105,9 @@
   </div>
 
   <script>
+    // --- SUPABASE CONFIGURATION ---
+    // 1. Create a table named 'estimates' in Supabase with a JSONB column named 'estimate_data'.
+    // 2. Paste your project URL and anon key below:
     const SUPABASE_URL = ''; 
     const SUPABASE_ANON_KEY = ''; 
     
@@ -111,6 +120,7 @@
     let recognition = null;
     let isRecording = false;
 
+    // --- VOICE DICTATION ---
     function toggleVoiceRecording() {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (!SpeechRecognition) {
@@ -178,6 +188,7 @@
       }
     }
 
+    // --- GENERATE ESTIMATE ---
     function generateEstimate() {
       const input = document.getElementById("notesInput").value;
       const companyName = document.getElementById("companyNameInput").value || "ProBuild Services";
@@ -186,7 +197,6 @@
 
       if (!input.trim()) return;
 
-      // Capture real-time Date & Time
       const now = new Date();
       const formattedDate = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
       const formattedTime = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
@@ -234,6 +244,7 @@
       renderEstimateUI();
     }
 
+    // --- RENDER ESTIMATE & EDIT CONTROLS ---
     function renderEstimateUI() {
       if (!currentEstimate) return;
 
@@ -269,10 +280,11 @@
             <span class="text-amber-500 font-mono text-[10px] block">[${item.category}]</span> 
             <input type="text" value="${item.description}" onchange="updateItemDesc(${index}, this.value)" class="w-full bg-slate-900 text-slate-200 border border-slate-800 rounded px-1.5 py-0.5 text-xs mt-0.5 focus:outline-none focus:border-amber-500">
           </div>
-          <div class="w-24 text-right">
+          <div class="w-20 text-right">
             <span class="text-[10px] text-slate-500 block">Total ($)</span>
             <input type="number" value="${item.total_cost}" onchange="updateItemCost(${index}, this.value)" class="w-full bg-slate-900 text-emerald-400 font-bold border border-slate-800 rounded px-1.5 py-0.5 text-xs text-right focus:outline-none focus:border-amber-500">
           </div>
+          <button onclick="removeLineItem(${index})" class="text-rose-400 hover:text-rose-300 px-1 py-1 text-xs mt-3" title="Delete item">🗑️</button>
         </div>`;
       });
 
@@ -286,6 +298,18 @@
         </div>
       </div>`;
 
+      // Terms & Signature Block
+      html += `
+        <div class="mt-4 pt-3 border-t border-slate-800 text-[10px] text-slate-400 space-y-2">
+          <p class="font-semibold text-slate-300">Terms & Conditions:</p>
+          <p>Payment due upon completion. This estimate is valid for 30 days from issuance. Any unforeseen structural damage will be billed separately upon client approval.</p>
+          <div class="pt-4 grid grid-cols-2 gap-4">
+            <div class="border-b border-slate-700 pb-6"><span class="text-[9px] text-slate-500 block">Contractor Signature</span></div>
+            <div class="border-b border-slate-700 pb-6"><span class="text-[9px] text-slate-500 block">Client Signature</span></div>
+          </div>
+        </div>
+      `;
+
       container.innerHTML = html;
     }
 
@@ -298,25 +322,44 @@
       currentEstimate.line_items[index].description = newDesc;
     }
 
+    function addNewLineItem() {
+      if (!currentEstimate) return;
+      currentEstimate.line_items.push({
+        category: "Custom",
+        description: "New custom work item",
+        quantity: 1,
+        unit_cost: 150,
+        total_cost: 150
+      });
+      renderEstimateUI();
+    }
+
+    function removeLineItem(index) {
+      if (!currentEstimate) return;
+      currentEstimate.line_items.splice(index, 1);
+      renderEstimateUI();
+    }
+
+    // --- DATABASE & EXPORT ---
     async function saveToSupabase() {
       if (!currentEstimate) return;
       if (!supabaseClient) {
-        alert("Supabase keys not configured yet. You can still export as PDF!");
+        alert("Supabase keys not configured yet. Add your Project URL & Anon Key in the code to enable cloud saves!");
         return;
       }
       try {
-        const { error } = await supabaseClient.from('estimates').insert([currentEstimate]);
+        const { error } = await supabaseClient.from('estimates').insert([{ estimate_data: currentEstimate }]);
         if (error) throw error;
-        alert("Estimate successfully saved to cloud database!");
+        alert("Estimate successfully saved to your Supabase cloud database!");
       } catch (err) {
-        alert("Error saving: " + err.message);
+        alert("Error saving to database: " + err.message);
       }
     }
 
     async function fetchHistory() {
       const container = document.getElementById("historyContainer");
       if (!supabaseClient) {
-        container.innerHTML = `<p class="text-slate-500 italic">Cloud storage not connected.</p>`;
+        container.innerHTML = `<p class="text-slate-500 italic">Cloud storage not connected. Set up your Supabase URL and Key in the script to load saved history.</p>`;
         return;
       }
       try {
@@ -324,29 +367,31 @@
         if (error) throw error;
         if (data && data.length > 0) {
           let html = '';
-          data.forEach(est => {
+          data.forEach(row => {
+            const est = row.estimate_data;
+            if (!est) return;
             html += `<div class="bg-slate-950 p-3 rounded-lg border border-slate-800 flex justify-between items-center">
               <div>
                 <p class="font-bold text-amber-400">${est.company_name} - ${est.client_name}</p>
                 <p class="text-[10px] text-slate-400">${est.client_address}</p>
-                <p class="text-[9px] text-slate-500 mt-0.5">${est.created_date || 'Date N/A'} at ${est.created_time || ''}</p>
+                <p class="text-[9px] text-slate-500 mt-0.5">${est.created_date || ''} at ${est.created_time || ''}</p>
               </div>
-              <span class="font-bold text-emerald-400">$${est.summary.grand_total}</span>
+              <span class="font-bold text-emerald-400">$${est.summary?.grand_total || 0}</span>
             </div>`;
           });
           container.innerHTML = html;
         } else {
-          container.innerHTML = `<p class="text-slate-500 italic">No saved estimates found.</p>`;
+          container.innerHTML = `<p class="text-slate-500 italic">No saved estimates found in database.</p>`;
         }
       } catch (err) {
-        container.innerHTML = `<p class="text-rose-400">Failed to load history.</p>`;
+        container.innerHTML = `<p class="text-rose-400">Failed to load history from database.</p>`;
       }
     }
 
     function downloadPDF() {
       const element = document.getElementById('outputContainer');
       const opt = {
-        margin: 0.5,
+        margin: 0.4,
         filename: `JobSight_Proposal_${Date.now()}.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
         html2canvas: { scale: 2 },
