@@ -48,9 +48,21 @@
             <input type="text" id="clientNameInput" value="John Smith" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-slate-200 focus:outline-none focus:border-amber-500">
           </div>
         </div>
-        <div>
-          <label class="text-[10px] text-slate-400 block mb-1">Property / Job Address</label>
-          <input type="text" id="clientAddressInput" value="123 Maple Street, Austin TX" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-slate-200 focus:outline-none focus:border-amber-500">
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="text-[10px] text-slate-400 block mb-1">Property / Job Address</label>
+            <input type="text" id="clientAddressInput" value="123 Maple Street, Austin TX" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-slate-200 focus:outline-none focus:border-amber-500">
+          </div>
+          <div>
+            <label class="text-[10px] text-slate-400 block mb-1">Job Area / Room Focus</label>
+            <select id="roomCategorySelect" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-amber-400 font-bold focus:outline-none focus:border-amber-500">
+              <option value="General & Whole House">General / Whole House</option>
+              <option value="Kitchen Remodel">Kitchen</option>
+              <option value="Master Bathroom">Master Bathroom</option>
+              <option value="Exterior & Roofing">Exterior / Roofing</option>
+              <option value="Basement / Addition">Basement / Addition</option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -75,7 +87,7 @@
           <button onclick="removePhoto()" class="absolute -top-2 -right-2 bg-rose-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] font-bold shadow">✕</button>
         </div>
         
-        <textarea id="notesInput" rows="4" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-sm text-slate-200 focus:outline-none focus:border-amber-500" placeholder="Type or dictate notes...&#10;Ex: Master bath remodel, demo old vanity, install 50 sq ft tile, run new plumbing."></textarea>
+        <textarea id="notesInput" rows="4" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-sm text-slate-200 focus:outline-none focus:border-amber-500" placeholder="Type or dictate notes...&#10;Ex: Demo old cabinets, install 100 sq ft tile, run new supply lines."></textarea>
         
         <button onclick="generateEstimate()" class="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold py-2.5 rounded-lg text-sm transition">
           Generate Instant Estimate
@@ -93,6 +105,17 @@
 
         <div id="outputContainer" class="space-y-2 text-xs bg-slate-950 p-3 rounded-lg border border-slate-800"></div>
         
+        <!-- Interactive Signature Pad Area -->
+        <div class="bg-slate-950 p-3 rounded-lg border border-slate-800 space-y-2">
+          <div class="flex justify-between items-center">
+            <span class="text-xs font-semibold text-slate-300">Client Signature Approval</span>
+            <button onclick="clearSignature()" class="text-[10px] text-rose-400 hover:underline">Clear Sign</button>
+          </div>
+          <div class="border border-slate-800 rounded bg-white overflow-hidden touch-none">
+            <canvas id="sigCanvas" height="100" class="w-full cursor-crosshair"></canvas>
+          </div>
+        </div>
+
         <div class="grid grid-cols-3 gap-2 pt-2">
           <button onclick="downloadPDF()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold py-2 rounded-lg text-xs transition">
             📄 Export PDF
@@ -100,8 +123,8 @@
           <button onclick="shareProposal()" class="bg-sky-600 hover:bg-sky-500 text-white font-semibold py-2 rounded-lg text-xs transition">
             📤 Text / Share
           </button>
-          <button onclick="saveToSupabase()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-2 rounded-lg text-xs transition">
-            ☁️ Save DB
+          <button onclick="saveEstimate()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-2 rounded-lg text-xs transition">
+            💾 Save Local
           </button>
         </div>
       </div>
@@ -111,7 +134,7 @@
     <div id="historyTab" class="hidden space-y-4">
       <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 space-y-3">
         <div class="flex justify-between items-center">
-          <h2 class="text-sm font-semibold text-slate-200">Saved Cloud Estimates</h2>
+          <h2 class="text-sm font-semibold text-slate-200">Saved Estimates (Local & Cloud)</h2>
           <button onclick="fetchHistory()" class="text-xs text-amber-500 hover:underline">Refresh</button>
         </div>
         <div id="historyContainer" class="space-y-3 text-xs">
@@ -136,11 +159,59 @@
     let recognition = null;
     let isRecording = false;
 
+    // --- SIGNATURE PAD LOGIC ---
+    let canvas, ctx, isDrawing = false;
+
+    window.addEventListener('DOMContentLoaded', () => {
+      canvas = document.getElementById('sigCanvas');
+      if (canvas) {
+        ctx = canvas.getContext('2d');
+        resizeCanvas();
+
+        canvas.addEventListener('mousedown', startDraw);
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('mouseup', stopDraw);
+        canvas.addEventListener('mouseleave', stopDraw);
+
+        canvas.addEventListener('touchstart', (e) => { e.preventDefault(); startDraw(e.touches[0]); });
+        canvas.addEventListener('touchmove', (e) => { e.preventDefault(); draw(e.touches[0]); });
+        canvas.addEventListener('touchend', stopDraw);
+      }
+    });
+
+    function resizeCanvas() {
+      if (!canvas) return;
+      canvas.width = canvas.parentElement.clientWidth;
+      canvas.height = 100;
+      ctx.strokeStyle = '#020617';
+      ctx.lineWidth = 2;
+      ctx.lineCap = 'round';
+    }
+
+    function startDraw(e) {
+      isDrawing = true;
+      const rect = canvas.getBoundingClientRect();
+      ctx.beginPath();
+      ctx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
+    }
+
+    function draw(e) {
+      if (!isDrawing) return;
+      const rect = canvas.getBoundingClientRect();
+      ctx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
+      ctx.stroke();
+    }
+
+    function stopDraw() { isDrawing = false; }
+    function clearSignature() {
+      if (!ctx || !canvas) return;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+
     // --- PHOTO UPLOAD / CAMERA ---
     function handlePhotoUpload(event) {
       const file = event.target.files[0];
       if (!file) return;
-
       const reader = new FileReader();
       reader.onload = function(e) {
         currentSitePhoto = e.target.result;
@@ -233,7 +304,8 @@
       const input = document.getElementById("notesInput").value;
       const companyName = document.getElementById("companyNameInput").value || "ProBuild Services";
       const clientName = document.getElementById("clientNameInput").value || "Residential Client";
-      const clientAddress = document.getElementById("clientAddressInput").value || "On-site Walkthrough";
+      const clientAddress = document.getElementById("clientAddressInput").value || "123 Maple Street, Austin TX";
+      const roomCategory = document.getElementById("roomCategorySelect").value;
 
       if (!input.trim()) return;
 
@@ -249,16 +321,16 @@
         const text = line.trim().toLowerCase();
         if (text.length === 0) return;
 
-        let category = "General";
+        let category = roomCategory;
         let cost = 150;
         let qty = 1;
 
         if (text.includes("demo") || text.includes("demolish") || text.includes("remove")) {
-          category = "Demolition"; cost = 85; qty = 8;
+          cost = 85; qty = 8;
         } else if (text.includes("tile") || text.includes("floor") || text.includes("sq ft")) {
-          category = "Finish Work"; cost = 14; qty = 50;
+          cost = 14; qty = 50;
         } else if (text.includes("plumb") || text.includes("vanity") || text.includes("pipe") || text.includes("sink")) {
-          category = "Plumbing"; cost = 450; qty = 1;
+          cost = 450; qty = 1;
         }
 
         const total = cost * qty;
@@ -267,7 +339,7 @@
       });
 
       if (items.length === 0) {
-        items.push({ category: "General Work", description: input.trim(), quantity: 1, unit_cost: 250, total_cost: 250 });
+        items.push({ category: roomCategory, description: input.trim(), quantity: 1, unit_cost: 250, total_cost: 250 });
         subtotal = 250;
       }
 
@@ -275,6 +347,7 @@
         company_name: companyName,
         client_name: clientName,
         client_address: clientAddress,
+        room_category: roomCategory,
         created_date: formattedDate,
         created_time: formattedTime,
         line_items: items,
@@ -306,6 +379,7 @@
           <div>
             <p class="text-amber-400 font-bold">${currentEstimate.company_name}</p>
             <p class="text-[10px] text-slate-400">Client: ${currentEstimate.client_name} (${currentEstimate.client_address})</p>
+            <p class="text-[9px] text-amber-500 font-mono mt-0.5">Area: ${currentEstimate.room_category}</p>
           </div>
           <div class="text-right">
             <span class="text-[10px] text-slate-400 block">${currentEstimate.created_date}</span>
@@ -338,24 +412,28 @@
         </div>
       </div>`;
 
-      // Photo Attachment Rendering inside Proposal
+      // Photo Attachment Rendering
       if (currentSitePhoto) {
         html += `
           <div class="mt-3 pt-3 border-t border-slate-800">
             <p class="text-[10px] text-slate-400 font-semibold mb-1">Site Inspection Photo:</p>
-            <img src="${currentSitePhoto}" class="max-h-44 w-auto rounded border border-slate-800 object-contain">
+            <img src="${currentSitePhoto}" class="max-h-40 w-auto rounded border border-slate-800 object-contain">
           </div>
         `;
       }
 
-      // Terms & Signature Block
+      // Terms & Signature Display
+      const sigDataUrl = canvas ? canvas.toDataURL() : null;
       html += `
         <div class="mt-4 pt-3 border-t border-slate-800 text-[10px] text-slate-400 space-y-2">
           <p class="font-semibold text-slate-300">Terms & Conditions:</p>
           <p>Payment due upon completion. This estimate is valid for 30 days from issuance. Any unforeseen structural damage will be billed separately upon client approval.</p>
-          <div class="pt-4 grid grid-cols-2 gap-4">
-            <div class="border-b border-slate-700 pb-6"><span class="text-[9px] text-slate-500 block">Contractor Signature</span></div>
-            <div class="border-b border-slate-700 pb-6"><span class="text-[9px] text-slate-500 block">Client Signature</span></div>
+          <div class="pt-3 grid grid-cols-2 gap-4 items-end">
+            <div><span class="text-[9px] text-slate-500 block border-b border-slate-700 pb-4">Contractor Signature</span></div>
+            <div>
+              ${canvas ? `<img src="${canvas.toDataURL()}" class="h-10 border-b border-slate-700 pb-1">` : `<div class="border-b border-slate-700 pb-6"></div>`}
+              <span class="text-[9px] text-slate-500 block pt-1">Client Approval Signature</span>
+            </div>
           </div>
         </div>
       `;
@@ -375,7 +453,7 @@
     function addNewLineItem() {
       if (!currentEstimate) return;
       currentEstimate.line_items.push({
-        category: "Custom",
+        category: currentEstimate.room_category || "General",
         description: "New custom work item",
         quantity: 1,
         unit_cost: 150,
@@ -390,52 +468,61 @@
       renderEstimateUI();
     }
 
-    // --- DATABASE & EXPORT ---
-    async function saveToSupabase() {
+    // --- LOCAL STORAGE & DATABASE SAVE ---
+    async function saveEstimate() {
       if (!currentEstimate) return;
-      if (!supabaseClient) {
-        alert("Supabase keys not configured yet. Add your Project URL & Anon Key in the code to enable cloud saves!");
-        return;
+
+      const sigImage = canvas ? canvas.toDataURL() : null;
+      const record = { ...currentEstimate, site_photo: currentSitePhoto, client_signature: sigImage, timestamp: Date.now() };
+
+      // 1. Save to LocalStorage (Instant offline access)
+      let localHistory = JSON.parse(localStorage.getItem('jobsight_estimates') || '[]');
+      localHistory.unshift(record);
+      localStorage.setItem('jobsight_estimates', JSON.stringify(localHistory));
+
+      // 2. Save to Supabase if keys configured
+      if (supabaseClient) {
+        try {
+          await supabaseClient.from('estimates').insert([{ estimate_data: record }]);
+        } catch (e) {}
       }
-      try {
-        const payload = { estimate_data: currentEstimate, photo: currentSitePhoto };
-        const { error } = await supabaseClient.from('estimates').insert([payload]);
-        if (error) throw error;
-        alert("Estimate successfully saved to your Supabase cloud database!");
-      } catch (err) {
-        alert("Error saving to database: " + err.message);
-      }
+
+      alert("Estimate successfully saved locally and to history!");
     }
 
     async function fetchHistory() {
       const container = document.getElementById("historyContainer");
-      if (!supabaseClient) {
-        container.innerHTML = `<p class="text-slate-500 italic">Cloud storage not connected.</p>`;
-        return;
+      let allRecords = [];
+
+      // Fetch Local Storage
+      const localHistory = JSON.parse(localStorage.getItem('jobsight_estimates') || '[]');
+      allRecords = [...localHistory];
+
+      // Fetch Cloud if available
+      if (supabaseClient) {
+        try {
+          const { data } = await supabaseClient.from('estimates').select('*').order('created_at', { ascending: false });
+          if (data) {
+            data.forEach(row => { if (row.estimate_data) allRecords.push(row.estimate_data); });
+          }
+        } catch (e) {}
       }
-      try {
-        const { data, error } = await supabaseClient.from('estimates').select('*').order('created_at', { ascending: false });
-        if (error) throw error;
-        if (data && data.length > 0) {
-          let html = '';
-          data.forEach(row => {
-            const est = row.estimate_data;
-            if (!est) return;
-            html += `<div class="bg-slate-950 p-3 rounded-lg border border-slate-800 flex justify-between items-center">
-              <div>
-                <p class="font-bold text-amber-400">${est.company_name} - ${est.client_name}</p>
-                <p class="text-[10px] text-slate-400">${est.client_address}</p>
-                <p class="text-[9px] text-slate-500 mt-0.5">${est.created_date || ''} at ${est.created_time || ''}</p>
-              </div>
-              <span class="font-bold text-emerald-400">$${est.summary?.grand_total || 0}</span>
-            </div>`;
-          });
-          container.innerHTML = html;
-        } else {
-          container.innerHTML = `<p class="text-slate-500 italic">No saved estimates found in database.</p>`;
-        }
-      } catch (err) {
-        container.innerHTML = `<p class="text-rose-400">Failed to load history from database.</p>`;
+
+      if (allRecords.length > 0) {
+        let html = '';
+        allRecords.forEach(est => {
+          html += `<div class="bg-slate-950 p-3 rounded-lg border border-slate-800 flex justify-between items-center">
+            <div>
+              <p class="font-bold text-amber-400">${est.company_name} - ${est.client_name}</p>
+              <p class="text-[10px] text-slate-400">${est.client_address} (${est.room_category || 'General'})</p>
+              <p class="text-[9px] text-slate-500 mt-0.5">${est.created_date || ''} at ${est.created_time || ''}</p>
+            </div>
+            <span class="font-bold text-emerald-400">$${est.summary?.grand_total || 0}</span>
+          </div>`;
+        });
+        container.innerHTML = html;
+      } else {
+        container.innerHTML = `<p class="text-slate-500 italic">No saved estimates found yet. Generate and save one!</p>`;
       }
     }
 
@@ -453,7 +540,7 @@
 
     function shareProposal() {
       if (!currentEstimate) return;
-      const textSummary = `*Estimate from ${currentEstimate.company_name}*\nDate: ${currentEstimate.created_date} (${currentEstimate.created_time})\nClient: ${currentEstimate.client_name}\nLocation: ${currentEstimate.client_address}\nGrand Total: $${currentEstimate.summary.grand_total}\n\nGenerated via JobSight AI.`;
+      const textSummary = `*Estimate from ${currentEstimate.company_name}* (${currentEstimate.room_category})\nDate: ${currentEstimate.created_date}\nClient: ${currentEstimate.client_name}\nLocation: ${currentEstimate.client_address}\nGrand Total: $${currentEstimate.summary.grand_total}\n\nGenerated via JobSight AI.`;
       
       if (navigator.share) {
         navigator.share({
