@@ -702,14 +702,17 @@
     }
 
     function downloadPDF() {
-      const element = document.getElementById('outputContainer');
+      const element = document.getElementById('outputWrapper');
+      if (!element) return;
+      
       const opt = {
         margin: 0.4,
-        filename: `JobSight_${currentEstimate?.order_number || Date.now()}.pdf`,
+        filename: `JobSight_Proposal_${currentEstimate?.order_number || Date.now()}.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2 },
+        html2canvas: { scale: 2, useCORS: true, logging: true },
         jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
       };
+      
       html2pdf().set(opt).from(element).save();
     }
 
