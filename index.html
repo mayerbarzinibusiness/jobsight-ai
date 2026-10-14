@@ -100,4 +100,324 @@
       <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 space-y-3">
         <div class="flex justify-between items-center">
           <h2 class="text-sm font-semibold text-slate-200">Saved Cloud Estimates</h2>
-          <button onclick="fetch
+          <button onclick="fetchHistory()" class="text-xs text-amber-500 hover:underline">Refresh</button>
+        </div>
+        <div id="historyContainer" class="space-y-3 text-xs">
+          <p class="text-slate-500 italic">Click refresh to load history...</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // --- SUPABASE CONFIGURATION ---
+    const SUPABASE_URL = ''; 
+    const SUPABASE_ANON_KEY = ''; 
+    
+    let supabaseClient = null;
+    if (SUPABASE_URL && SUPABASE_URL.startsWith('http')) {
+      try { supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY); } catch (e) {}
+    }
+
+    let currentEstimate = null;
+    let recognition = null;
+    let isRecording = false;
+
+    // --- VOICE DICTATION ---
+    function toggleVoiceRecording() {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SpeechRecognition) {
+        alert("Speech recognition not supported on this browser.");
+        return;
+      }
+      const micBtn = document.getElementById("micBtn");
+      const notesInput = document.getElementById("notesInput");
+
+      if (!isRecording) {
+        recognition = new SpeechRecognition();
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        recognition.lang = 'en-US';
+
+        recognition.onstart = () => {
+          isRecording = true;
+          micBtn.className = "bg-rose-600 animate-pulse text-white text-xs font-bold px-3 py-1.5 rounded-lg transition flex items-center space-x-1.5";
+          micBtn.innerHTML = "<span>🔴 Listening...</span>";
+        };
+        recognition.onresult = (event) => {
+          let transcript = '';
+          for (let i = event.resultIndex; i < event.results.length; ++i) {
+            transcript += event.results[i][0].transcript;
+          }
+          if (transcript.trim()) {
+            notesInput.value = notesInput.value + (notesInput.value ? ' ' : '') + transcript;
+          }
+        };
+        recognition.onerror = () => { stopVoiceRecording(); };
+        recognition.onend = () => { stopVoiceRecording(); };
+        try { recognition.start(); } catch (err) { stopVoiceRecording(); }
+      } else {
+        if (recognition) recognition.stop();
+        stopVoiceRecording();
+      }
+    }
+
+    function stopVoiceRecording() {
+      isRecording = false;
+      const micBtn = document.getElementById("micBtn");
+      if (micBtn) {
+        micBtn.className = "bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold px-3 py-1.5 rounded-lg transition flex items-center space-x-1.5";
+        micBtn.innerHTML = "<span>🎙️ Voice Dictation</span>";
+      }
+    }
+
+    function switchTab(tab) {
+      const genTab = document.getElementById('generatorTab');
+      const histTab = document.getElementById('historyTab');
+      const genBtn = document.getElementById('tabGenBtn');
+      const histBtn = document.getElementById('tabHistBtn');
+
+      if (tab === 'generator') {
+        genTab.classList.remove('hidden');
+        histTab.classList.add('hidden');
+        genBtn.className = "bg-amber-500 text-slate-950 text-xs font-bold px-3 py-1.5 rounded-lg transition";
+        histBtn.className = "bg-slate-800 text-slate-300 text-xs font-semibold px-3 py-1.5 rounded-lg transition";
+      } else {
+        genTab.classList.add('hidden');
+        histTab.classList.remove('hidden');
+        histBtn.className = "bg-amber-500 text-slate-950 text-xs font-bold px-3 py-1.5 rounded-lg transition";
+        genBtn.className = "bg-slate-800 text-slate-300 text-xs font-semibold px-3 py-1.5 rounded-lg transition";
+        fetchHistory();
+      }
+    }
+
+    // --- GENERATE ESTIMATE ---
+    function generateEstimate() {
+      const input = document.getElementById("notesInput").value;
+      const companyName = document.getElementById("companyNameInput").value || "ProBuild Services";
+      const clientName = document.getElementById("clientNameInput").value || "Residential Client";
+      const clientAddress = document.getElementById("clientAddressInput").value || "On-site Walkthrough";
+
+      if (!input.trim()) return;
+
+      const now = new Date();
+      const formattedDate = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      const formattedTime = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+
+      const rawLines = input.split(/[\n,.]+/);
+      const items = [];
+      let subtotal = 0;
+
+      rawLines.forEach((line) => {
+        const text = line.trim().toLowerCase();
+        if (text.length === 0) return;
+
+        let category = "General";
+        let cost = 150;
+        let qty = 1;
+
+        if (text.includes("demo") || text.includes("demolish") || text.includes("remove")) {
+          category = "Demolition"; cost = 85; qty = 8;
+        } else if (text.includes("tile") || text.includes("floor") || text.includes("sq ft")) {
+          category = "Finish Work"; cost = 14; qty = 50;
+        } else if (text.includes("plumb") || text.includes("vanity") || text.includes("pipe") || text.includes("sink")) {
+          category = "Plumbing"; cost = 450; qty = 1;
+        }
+
+        const total = cost * qty;
+        subtotal += total;
+        items.push({ category, description: line.trim(), quantity: qty, unit_cost: cost, total_cost: total });
+      });
+
+      if (items.length === 0) {
+        items.push({ category: "General Work", description: input.trim(), quantity: 1, unit_cost: 250, total_cost: 250 });
+        subtotal = 250;
+      }
+
+      currentEstimate = {
+        company_name: companyName,
+        client_name: clientName,
+        client_address: clientAddress,
+        created_date: formattedDate,
+        created_time: formattedTime,
+        line_items: items,
+        summary: { subtotal, grand_total: subtotal }
+      };
+
+      renderEstimateUI();
+    }
+
+    // --- RENDER ESTIMATE & EDIT CONTROLS ---
+    function renderEstimateUI() {
+      if (!currentEstimate) return;
+
+      let subtotal = 0;
+      currentEstimate.line_items.forEach(item => {
+        subtotal += Number(item.total_cost) || 0;
+      });
+      const contingency = Math.round(subtotal * 0.10);
+      const tax = Math.round(subtotal * 0.08);
+      const grand_total = subtotal + contingency + tax;
+
+      currentEstimate.summary = { subtotal, estimated_contingency: contingency, tax, grand_total };
+
+      document.getElementById("outputWrapper").classList.remove("hidden");
+      const container = document.getElementById("outputContainer");
+
+      let html = `
+        <div class="border-b border-slate-800 pb-2 mb-3 flex justify-between items-start">
+          <div>
+            <p class="text-amber-400 font-bold">${currentEstimate.company_name}</p>
+            <p class="text-[10px] text-slate-400">Client: ${currentEstimate.client_name} (${currentEstimate.client_address})</p>
+          </div>
+          <div class="text-right">
+            <span class="text-[10px] text-slate-400 block">${currentEstimate.created_date}</span>
+            <span class="text-[9px] text-slate-500 font-mono">${currentEstimate.created_time}</span>
+          </div>
+        </div>
+      `;
+      
+      currentEstimate.line_items.forEach((item, index) => {
+        html += `<div class="flex items-center justify-between border-b border-slate-900/50 pb-2 mb-2 gap-2">
+          <div class="flex-1">
+            <span class="text-amber-500 font-mono text-[10px] block">[${item.category}]</span> 
+            <input type="text" value="${item.description}" onchange="updateItemDesc(${index}, this.value)" class="w-full bg-slate-900 text-slate-200 border border-slate-800 rounded px-1.5 py-0.5 text-xs mt-0.5 focus:outline-none focus:border-amber-500">
+          </div>
+          <div class="w-20 text-right">
+            <span class="text-[10px] text-slate-500 block">Total ($)</span>
+            <input type="number" value="${item.total_cost}" onchange="updateItemCost(${index}, this.value)" class="w-full bg-slate-900 text-emerald-400 font-bold border border-slate-800 rounded px-1.5 py-0.5 text-xs text-right focus:outline-none focus:border-amber-500">
+          </div>
+          <button onclick="removeLineItem(${index})" class="text-rose-400 hover:text-rose-300 px-1 py-1 text-xs mt-3" title="Delete item">🗑️</button>
+        </div>`;
+      });
+
+      html += `<div class="pt-2 text-xs space-y-1 border-t border-slate-800 mt-3 text-slate-400">
+        <div class="flex justify-between"><span>Subtotal:</span><span>$${subtotal}</span></div>
+        <div class="flex justify-between"><span>Contingency (10%):</span><span>$${contingency}</span></div>
+        <div class="flex justify-between"><span>Est. Tax (8%):</span><span>$${tax}</span></div>
+        <div class="flex justify-between font-bold text-slate-100 pt-1 border-t border-slate-900 text-sm">
+          <span>Grand Total:</span>
+          <span class="text-amber-400">$${grand_total}</span>
+        </div>
+      </div>`;
+
+      // Terms & Signature Block
+      html += `
+        <div class="mt-4 pt-3 border-t border-slate-800 text-[10px] text-slate-400 space-y-2">
+          <p class="font-semibold text-slate-300">Terms & Conditions:</p>
+          <p>Payment due upon completion. This estimate is valid for 30 days from issuance. Any unforeseen structural damage will be billed separately upon client approval.</p>
+          <div class="pt-4 grid grid-cols-2 gap-4">
+            <div class="border-b border-slate-700 pb-6"><span class="text-[9px] text-slate-500 block">Contractor Signature</span></div>
+            <div class="border-b border-slate-700 pb-6"><span class="text-[9px] text-slate-500 block">Client Signature</span></div>
+          </div>
+        </div>
+      `;
+
+      container.innerHTML = html;
+    }
+
+    function updateItemCost(index, newCost) {
+      currentEstimate.line_items[index].total_cost = parseFloat(newCost) || 0;
+      renderEstimateUI();
+    }
+
+    function updateItemDesc(index, newDesc) {
+      currentEstimate.line_items[index].description = newDesc;
+    }
+
+    function addNewLineItem() {
+      if (!currentEstimate) return;
+      currentEstimate.line_items.push({
+        category: "Custom",
+        description: "New custom work item",
+        quantity: 1,
+        unit_cost: 150,
+        total_cost: 150
+      });
+      renderEstimateUI();
+    }
+
+    function removeLineItem(index) {
+      if (!currentEstimate) return;
+      currentEstimate.line_items.splice(index, 1);
+      renderEstimateUI();
+    }
+
+    // --- DATABASE & EXPORT ---
+    async function saveToSupabase() {
+      if (!currentEstimate) return;
+      if (!supabaseClient) {
+        alert("Supabase keys not configured yet. Add your Project URL & Anon Key in the code to enable cloud saves!");
+        return;
+      }
+      try {
+        const { error } = await supabaseClient.from('estimates').insert([{ estimate_data: currentEstimate }]);
+        if (error) throw error;
+        alert("Estimate successfully saved to your Supabase cloud database!");
+      } catch (err) {
+        alert("Error saving to database: " + err.message);
+      }
+    }
+
+    async function fetchHistory() {
+      const container = document.getElementById("historyContainer");
+      if (!supabaseClient) {
+        container.innerHTML = `<p class="text-slate-500 italic">Cloud storage not connected. Set up your Supabase URL and Key in the script to load saved history.</p>`;
+        return;
+      }
+      try {
+        const { data, error } = await supabaseClient.from('estimates').select('*').order('created_at', { ascending: false });
+        if (error) throw error;
+        if (data && data.length > 0) {
+          let html = '';
+          data.forEach(row => {
+            const est = row.estimate_data;
+            if (!est) return;
+            html += `<div class="bg-slate-950 p-3 rounded-lg border border-slate-800 flex justify-between items-center">
+              <div>
+                <p class="font-bold text-amber-400">${est.company_name} - ${est.client_name}</p>
+                <p class="text-[10px] text-slate-400">${est.client_address}</p>
+                <p class="text-[9px] text-slate-500 mt-0.5">${est.created_date || ''} at ${est.created_time || ''}</p>
+              </div>
+              <span class="font-bold text-emerald-400">$${est.summary?.grand_total || 0}</span>
+            </div>`;
+          });
+          container.innerHTML = html;
+        } else {
+          container.innerHTML = `<p class="text-slate-500 italic">No saved estimates found in database.</p>`;
+        }
+      } catch (err) {
+        container.innerHTML = `<p class="text-rose-400">Failed to load history from database.</p>`;
+      }
+    }
+
+    function downloadPDF() {
+      const element = document.getElementById('outputContainer');
+      const opt = {
+        margin: 0.4,
+        filename: `JobSight_Proposal_${Date.now()}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+      };
+      html2pdf().set(opt).from(element).save();
+    }
+
+    function shareProposal() {
+      if (!currentEstimate) return;
+      const textSummary = `*Estimate from ${currentEstimate.company_name}*\nDate: ${currentEstimate.created_date} (${currentEstimate.created_time})\nClient: ${currentEstimate.client_name}\nLocation: ${currentEstimate.client_address}\nGrand Total: $${currentEstimate.summary.grand_total}\n\nGenerated via JobSight AI.`;
+      
+      if (navigator.share) {
+        navigator.share({
+          title: 'JobSight Estimate',
+          text: textSummary,
+        }).catch(() => {});
+      } else {
+        navigator.clipboard.writeText(textSummary);
+        alert("Estimate summary copied to clipboard!");
+      }
+    }
+  </script>
+</body>
+</html>
