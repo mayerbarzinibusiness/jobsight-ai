@@ -11,7 +11,6 @@
 
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
   <style>
     html {
@@ -48,6 +47,24 @@
     }
 
     canvas { touch-action: none; }
+
+    /* NATIVE PRINT STYLING: Automatically converts the page to a clean black-and-white document when printing/exporting PDF */
+    #printDocument { display: none; }
+
+    @media print {
+      body * { visibility: hidden; }
+      #printDocument, #printDocument * { visibility: visible; }
+      #printDocument {
+        display: block !important;
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        background: #ffffff !important;
+        color: #000000 !important;
+        padding: 20px;
+      }
+    }
   </style>
 </head>
 <body class="min-h-screen flex flex-col justify-between">
@@ -181,7 +198,7 @@
 
         <!-- Action Buttons -->
         <div class="grid grid-cols-1 gap-2.5 pt-1">
-          <button id="btnPdf" onclick="downloadPDF()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold py-3 rounded-xl text-xs">📄 Export PDF</button>
+          <button id="btnPdf" onclick="downloadPDF()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold py-3 rounded-xl text-xs">📄 Export PDF / Print</button>
           <div class="grid grid-cols-2 gap-2">
             <button id="btnShare" onclick="shareProposal()" class="bg-sky-600 hover:bg-sky-500 text-white font-bold py-3 rounded-xl text-xs">📤 Share</button>
             <button id="btnSave" onclick="saveEstimate()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl text-xs">💾 Save Local</button>
@@ -205,6 +222,9 @@
     </div>
 
   </main>
+
+  <!-- Dedicated Hidden Print Document Node -->
+  <div id="printDocument"></div>
 
   <footer class="border-t border-slate-900 bg-slate-950 py-3 text-center text-slate-600 text-[11px]">
     <p>JobSight AI Field OS &bull; Mobile Optimized</p>
@@ -702,15 +722,7 @@
     function downloadPDF() {
       if (!currentEstimate) return;
       
-      const pdfContainer = document.createElement('div');
-      pdfContainer.style.background = '#ffffff';
-      pdfContainer.style.color = '#000000';
-      pdfContainer.style.padding = '30px';
-      pdfContainer.style.fontFamily = 'Arial, sans-serif';
-      pdfContainer.style.fontSize = '13px';
-      pdfContainer.style.width = '700px';
-      pdfContainer.style.boxSizing = 'border-box';
-
+      const printDoc = document.getElementById('printDocument');
       let itemsHtml = '';
       let subtotal = currentEstimate.summary.subtotal || 0;
       let contingency = currentEstimate.summary.estimated_contingency || 0;
@@ -720,85 +732,68 @@
       currentEstimate.line_items.forEach(item => {
         itemsHtml += `
           <tr style="border-bottom: 1px solid #cbd5e1;">
-            <td style="padding: 10px; color: #000000;">[${item.category}] ${item.description}</td>
-            <td style="padding: 10px; text-align: right; color: #000000; font-weight: bold;">$${item.total_cost}</td>
+            <td style="padding: 12px; color: #000000;">[${item.category}] ${item.description}</td>
+            <td style="padding: 12px; text-align: right; color: #000000; font-weight: bold;">$${item.total_cost}</td>
           </tr>
         `;
       });
 
       const sigDataUrl = (canvas && hasSigned) ? canvas.toDataURL() : '';
 
-      pdfContainer.innerHTML = `
-        <div style="display: flex; justify-content: space-between; border-bottom: 2px solid #0f172a; padding-bottom: 12px; margin-bottom: 20px;">
-          <div>
-            <h2 style="margin: 0; color: #0f172a; font-size: 20px;">${currentEstimate.company_name}</h2>
-            <p style="margin: 4px 0 0 0; color: #475569; font-size: 11px;">Order: <strong>${currentEstimate.order_number}</strong> | Date: ${currentEstimate.created_date}</p>
+      printDoc.innerHTML = `
+        <div style="font-family: Arial, sans-serif; font-size: 14px; max-width: 750px; margin: 0 auto; background: #ffffff; color: #000000; padding: 20px;">
+          <div style="display: flex; justify-content: space-between; border-bottom: 2px solid #0f172a; padding-bottom: 15px; margin-bottom: 25px;">
+            <div>
+              <h2 style="margin: 0; color: #0f172a; font-size: 22px;">${currentEstimate.company_name}</h2>
+              <p style="margin: 5px 0 0 0; color: #475569; font-size: 12px;">Order: <strong>${currentEstimate.order_number}</strong> | Date: ${currentEstimate.created_date}</p>
+            </div>
+            <div style="text-align: right;">
+              <p style="margin: 0; color: #0f172a; font-size: 15px;"><strong>Client:</strong> ${currentEstimate.client_name}</p>
+              <p style="margin: 5px 0 0 0; color: #475569; font-size: 12px;">${currentEstimate.client_address}</p>
+            </div>
           </div>
-          <div style="text-align: right;">
-            <p style="margin: 0; color: #0f172a; font-size: 14px;"><strong>Client:</strong> ${currentEstimate.client_name}</p>
-            <p style="margin: 4px 0 0 0; color: #475569; font-size: 11px;">${currentEstimate.client_address}</p>
+
+          <h3 style="color: #0f172a; font-size: 15px; text-transform: uppercase; margin-bottom: 12px;">Itemized Estimate</h3>
+          <table style="width: 100%; border-collapse: collapse; margin-bottom: 25px;">
+            <thead>
+              <tr style="background-color: #f1f5f9; border-bottom: 2px solid #94a3b8;">
+                <th style="padding: 12px; text-align: left; color: #0f172a;">Description</th>
+                <th style="padding: 12px; text-align: right; color: #0f172a;">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${itemsHtml}
+            </tbody>
+          </table>
+
+          <div style="width: 280px; margin-left: auto; margin-bottom: 30px; font-size: 14px;">
+            <div style="display: flex; justify-content: space-between; padding: 6px 0; color: #334155;"><span>Subtotal:</span> <span>$${subtotal}</span></div>
+            <div style="display: flex; justify-content: space-between; padding: 6px 0; color: #334155;"><span>Contingency (10%):</span> <span>$${contingency}</span></div>
+            <div style="display: flex; justify-content: space-between; padding: 6px 0; color: #334155;"><span>Est. Tax (8%):</span> <span>$${tax}</span></div>
+            <div style="display: flex; justify-content: space-between; padding: 10px 0; border-top: 2px solid #0f172a; font-weight: bold; color: #0f172a; font-size: 16px;">
+              <span>Grand Total:</span> <span>$${grandTotal}</span>
+            </div>
           </div>
-        </div>
 
-        <h3 style="color: #0f172a; font-size: 14px; text-transform: uppercase; margin-bottom: 10px;">Itemized Estimate</h3>
-        <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
-          <thead>
-            <tr style="background-color: #f1f5f9; border-bottom: 2px solid #94a3b8;">
-              <th style="padding: 10px; text-align: left; color: #0f172a;">Description</th>
-              <th style="padding: 10px; text-align: right; color: #0f172a;">Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${itemsHtml}
-          </tbody>
-        </table>
+          ${currentSitePhoto ? `<div style="margin-bottom: 25px;"><p style="font-weight: bold; color: #0f172a; margin-bottom: 8px;">Site Inspection Photo:</p><img src="${currentSitePhoto}" style="max-height: 200px; border-radius: 6px; border: 1px solid #cbd5e1;" /></div>` : ''}
 
-        <div style="width: 250px; margin-left: auto; margin-bottom: 25px; font-size: 13px;">
-          <div style="display: flex; justify-content: space-between; padding: 4px 0; color: #334155;"><span>Subtotal:</span> <span>$${subtotal}</span></div>
-          <div style="display: flex; justify-content: space-between; padding: 4px 0; color: #334155;"><span>Contingency (10%):</span> <span>$${contingency}</span></div>
-          <div style="display: flex; justify-content: space-between; padding: 4px 0; color: #334155;"><span>Est. Tax (8%):</span> <span>$${tax}</span></div>
-          <div style="display: flex; justify-content: space-between; padding: 8px 0; border-top: 2px solid #0f172a; font-weight: bold; color: #0f172a; font-size: 15px;">
-            <span>Grand Total:</span> <span>$${grandTotal}</span>
-          </div>
-        </div>
-
-        ${currentSitePhoto ? `<div style="margin-bottom: 20px;"><p style="font-weight: bold; color: #0f172a; margin-bottom: 5px;">Site Inspection Photo:</p><img src="${currentSitePhoto}" style="max-height: 180px; border-radius: 6px; border: 1px solid #cbd5e1;" /></div>` : ''}
-
-        <div style="border-top: 1px solid #cbd5e1; padding-top: 15px; margin-top: 20px; color: #475569; font-size: 10px;">
-          <p style="font-weight: bold; color: #0f172a; margin-bottom: 4px;">Terms & Conditions:</p>
-          <p style="margin: 0; line-height: 1.4;">Payment due upon completion. This estimate is valid for 30 days from issuance. Any unforeseen structural damage will be billed separately upon client approval.</p>
-          
-          <div style="display: flex; justify-content: space-between; margin-top: 30px; align-items: flex-end;">
-            <div style="width: 45%; border-top: 1px solid #0f172a; padding-top: 5px; color: #0f172a; font-weight: bold;">Contractor Signature</div>
-            <div style="width: 45%;">
-              ${sigDataUrl ? `<img src="${sigDataUrl}" style="height: 45px; display: block; margin-bottom: 2px;" />` : `<div style="height: 45px;"></div>`}
-              <div style="border-top: 1px solid #0f172a; padding-top: 5px; color: #0f172a; font-weight: bold;">Client Approval Signature</div>
+          <div style="border-top: 1px solid #cbd5e1; padding-top: 20px; margin-top: 25px; color: #475569; font-size: 11px;">
+            <p style="font-weight: bold; color: #0f172a; margin-bottom: 6px;">Terms & Conditions:</p>
+            <p style="margin: 0; line-height: 1.5;">Payment due upon completion. This estimate is valid for 30 days from issuance. Any unforeseen structural damage will be billed separately upon client approval.</p>
+            
+            <div style="display: flex; justify-content: space-between; margin-top: 40px; align-items: flex-end;">
+              <div style="width: 45%; border-top: 1px solid #0f172a; padding-top: 8px; color: #0f172a; font-weight: bold;">Contractor Signature</div>
+              <div style="width: 45%;">
+                ${sigDataUrl ? `<img src="${sigDataUrl}" style="height: 50px; display: block; margin-bottom: 4px;" />` : `<div style="height: 50px;"></div>`}
+                <div style="border-top: 1px solid #0f172a; padding-top: 8px; color: #0f172a; font-weight: bold;">Client Approval Signature</div>
+              </div>
             </div>
           </div>
         </div>
       `;
 
-      // Temporarily append the container invisibly to the DOM so mobile browsers can calculate geometry and render canvas items
-      pdfContainer.style.position = 'absolute';
-      pdfContainer.style.left = '0';
-      pdfContainer.style.top = '-9999px';
-      document.body.appendChild(pdfContainer);
-
-      const opt = {
-        margin: 0.3,
-        filename: `JobSight_Proposal_${currentEstimate.order_number}.pdf`,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, logging: false },
-        jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
-      };
-
-      html2pdf().set(opt).from(pdfContainer).save().then(() => {
-        pdfContainer.remove();
-      }).catch(() => {
-        if (document.body.contains(pdfContainer)) {
-          pdfContainer.remove();
-        }
-      });
+      // Trigger the browser's native print / save as PDF dialog, which works on every phone and PC
+      window.print();
     }
 
     function shareProposal() {
