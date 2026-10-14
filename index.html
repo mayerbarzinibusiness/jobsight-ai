@@ -11,8 +11,6 @@
 
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <!-- html2pdf Library -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
   <!-- Leaflet CSS & JS for Free Open-Source Satellite Maps -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -56,12 +54,43 @@
       touch-action: none; 
       cursor: crosshair;
     }
+
+    /* Print / Direct Save to PDF CSS Override */
+    @media print {
+      body {
+        background-color: #ffffff !important;
+        color: #000000 !important;
+      }
+
+      /* Hide header, navigation, form inputs, map, and action buttons when generating PDF */
+      header, footer, #generatorTab > div:not(#outputWrapper), #roofTab, #historyTab, button, .no-print {
+        display: none !important;
+      }
+
+      #outputWrapper {
+        display: block !important;
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+      }
+
+      #printablePdfArea {
+        display: block !important;
+        color: #000000 !important;
+        background: #ffffff !important;
+      }
+
+      .print-border {
+        border-bottom: 1px solid #cbd5e1 !important;
+      }
+    }
   </style>
 </head>
 <body class="min-h-screen flex flex-col justify-between">
 
   <!-- Header -->
-  <header class="sticky top-0 z-40 bg-slate-950/95 backdrop-blur border-b border-slate-800 p-3">
+  <header class="sticky top-0 z-40 bg-slate-950/95 backdrop-blur border-b border-slate-800 p-3 no-print">
     <div class="max-w-3xl mx-auto flex items-center justify-between gap-2">
       <div class="flex items-center space-x-2 min-w-0">
         <div id="headerLogoWrapper" class="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center shrink-0 overflow-hidden">
@@ -94,7 +123,7 @@
     <div id="generatorTab" class="space-y-4">
       
       <!-- Section 1 -->
-      <div class="bg-slate-900 p-4 rounded-2xl border border-slate-800 space-y-3 shadow-lg">
+      <div class="bg-slate-900 p-4 rounded-2xl border border-slate-800 space-y-3 shadow-lg no-print">
         <div class="flex items-center space-x-2 border-b border-slate-800 pb-2">
           <span class="text-amber-500 font-mono text-xs font-bold">01.</span>
           <h2 id="lblDetailsTitle" class="text-xs font-bold text-amber-400 uppercase tracking-wide">Proposal Details & Logo</h2>
@@ -146,7 +175,7 @@
       </div>
 
       <!-- Section 2 -->
-      <div class="bg-slate-900 p-4 rounded-2xl border border-slate-800 space-y-3 shadow-lg">
+      <div class="bg-slate-900 p-4 rounded-2xl border border-slate-800 space-y-3 shadow-lg no-print">
         <div class="flex items-center justify-between border-b border-slate-800 pb-2">
           <div class="flex items-center space-x-2">
             <span class="text-amber-500 font-mono text-xs font-bold">02.</span>
@@ -188,7 +217,7 @@
 
       <!-- Section 3: Output Proposal & Payment Processing -->
       <div id="outputWrapper" class="hidden bg-slate-900 p-4 rounded-2xl border border-slate-800 space-y-4 shadow-xl">
-        <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-2 no-print">
           <div class="flex items-center space-x-2">
             <span class="text-amber-500 font-mono text-xs font-bold">03.</span>
             <h2 id="lblProposalTitle" class="text-xs font-bold text-slate-200 uppercase tracking-wide">Itemized Proposal & Payment</h2>
@@ -196,13 +225,14 @@
           <button id="btnAddItem" onclick="addNewLineItem()" class="bg-slate-800 text-amber-400 text-xs font-bold px-2.5 py-1 rounded-lg">+ Item</button>
         </div>
 
-        <div id="outputContainer" class="space-y-3 text-xs bg-slate-950 p-4 rounded-xl border border-slate-800"></div>
+        <!-- On-Screen Dark Container -->
+        <div id="outputContainer" class="space-y-3 text-xs bg-slate-950 p-4 rounded-xl border border-slate-800 no-print"></div>
 
-        <!-- Hidden Off-Screen Container Rendered Specially for PDF Export -->
-        <div id="pdfExportContainer" style="position: absolute; left: -9999px; top: 0; width: 700px; background: #ffffff; color: #0f172a; padding: 30px; font-family: Helvetica, Arial, sans-serif;"></div>
+        <!-- Dedicated Light Printable PDF Container -->
+        <div id="printablePdfArea" class="space-y-3 text-xs p-2 rounded-xl text-slate-900 bg-white"></div>
 
         <!-- Payment Processing Box -->
-        <div class="bg-slate-950 p-3.5 rounded-xl border border-slate-800 space-y-3">
+        <div class="bg-slate-950 p-3.5 rounded-xl border border-slate-800 space-y-3 no-print">
           <div class="flex items-center justify-between border-b border-slate-800 pb-2">
             <span class="text-xs font-bold text-amber-400">💳 Payment Processing & Balance</span>
             <span id="paymentStatusBadge" class="bg-amber-500/10 text-amber-400 border border-amber-500/30 text-[10px] px-2 py-0.5 rounded font-bold uppercase">Pending</span>
@@ -234,7 +264,7 @@
         </div>
 
         <!-- Signature Pad -->
-        <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2">
+        <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2 no-print">
           <div class="flex items-center justify-between">
             <span id="lblSigTitle" class="text-xs font-bold text-slate-300">Client Signature Approval</span>
             <button id="lblClearSig" onclick="clearSignature()" class="text-xs text-rose-400 underline font-semibold">Clear</button>
@@ -248,8 +278,8 @@
         </div>
 
         <!-- Action Buttons -->
-        <div class="grid grid-cols-1 gap-2.5 pt-1">
-          <button id="btnPdf" onclick="downloadPDF()" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-3.5 rounded-xl text-xs uppercase tracking-wider shadow-md">📄 Download PDF Proposal</button>
+        <div class="grid grid-cols-1 gap-2.5 pt-1 no-print">
+          <button id="btnPdf" onclick="downloadPDF()" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-3.5 rounded-xl text-xs uppercase tracking-wider shadow-md">📄 Save PDF / Print</button>
           <div class="grid grid-cols-2 gap-2">
             <button id="btnShare" onclick="shareProposal()" class="bg-sky-600 hover:bg-sky-500 text-white font-bold py-3 rounded-xl text-xs">📤 Share</button>
             <button id="btnSave" onclick="saveEstimate()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl text-xs">💾 Save Local</button>
@@ -260,7 +290,7 @@
     </div>
 
     <!-- TAB 2: BIRD'S EYE ROOF MEASUREMENT -->
-    <div id="roofTab" class="hidden space-y-4">
+    <div id="roofTab" class="hidden space-y-4 no-print">
       <div class="bg-slate-900 p-4 rounded-2xl border border-slate-800 space-y-3 shadow-lg">
         <div class="flex items-center justify-between border-b border-slate-800 pb-2">
           <div class="flex items-center space-x-2">
@@ -301,7 +331,7 @@
     </div>
 
     <!-- TAB 3: HISTORY -->
-    <div id="historyTab" class="hidden space-y-4">
+    <div id="historyTab" class="hidden space-y-4 no-print">
       <div class="bg-slate-900 p-4 rounded-2xl border border-slate-800 space-y-3 shadow-lg">
         <div class="flex items-center justify-between border-b border-slate-800 pb-2">
           <h2 id="lblHistoryTitle" class="text-xs font-bold text-slate-200 uppercase">Saved Estimates & History</h2>
@@ -315,7 +345,7 @@
 
   </main>
 
-  <footer class="border-t border-slate-900 bg-slate-950 py-3 text-center text-slate-600 text-[11px]">
+  <footer class="border-t border-slate-900 bg-slate-950 py-3 text-center text-slate-600 text-[11px] no-print">
     <p>JobSight AI Field OS &bull; Roofing & Operations Engine</p>
   </footer>
 
@@ -860,7 +890,7 @@
       document.getElementById("outputWrapper").classList.remove("hidden");
       const container = document.getElementById("outputContainer");
 
-      // 1. Render App UI (Dark Mode)
+      // 1. Render Screen App View (Dark Mode)
       let html = `
         <div class="border-b border-slate-800 pb-2.5 mb-3 flex justify-between items-start gap-2">
           <div>
@@ -942,24 +972,26 @@
       container.innerHTML = html;
       document.getElementById("remainingBalanceDisplay").innerText = `$${remainingBalance.toFixed(2)}`;
 
-      // 2. Render Dedicated Clean PDF Export HTML Container
-      const pdfContainer = document.getElementById("pdfExportContainer");
+      // 2. Render Printable PDF Container (High-Contrast Light Vector Layout)
+      const pdfContainer = document.getElementById("printablePdfArea");
       let pdfHtml = `
-        <div style="display: flex; justify-content: space-between; border-bottom: 2px solid #0f172a; padding-bottom: 12px; margin-bottom: 15px;">
+        <div style="border-bottom: 2px solid #0f172a; padding-bottom: 12px; margin-bottom: 15px; display: flex; justify-content: space-between;">
           <div>
-            <h2 style="font-size: 18px; font-weight: bold; color: #0f172a; margin: 0;">${currentEstimate.company_name}</h2>
+            <h2 style="font-size: 20px; font-weight: bold; color: #0f172a; margin: 0;">${currentEstimate.company_name}</h2>
             <p style="font-size: 11px; color: #475569; margin: 4px 0 0 0;">Order: <strong>${currentEstimate.order_number}</strong> &bull; ${currentEstimate.created_date} at ${currentEstimate.created_time}</p>
           </div>
           <div style="text-align: right;">
             <p style="font-size: 11px; color: #475569; margin: 0;">Client: <strong>${currentEstimate.client_name}</strong><br>${currentEstimate.client_address}</p>
           </div>
         </div>
-        <div style="font-size: 12px; font-weight: bold; color: #0f172a; margin-bottom: 10px; text-transform: uppercase;">Itemized Proposal & Summary</div>
+
+        <div style="font-size: 12px; font-weight: bold; color: #0f172a; margin-bottom: 10px; text-transform: uppercase;">Itemized Proposal & Financial Summary</div>
+        
         <table style="width: 100%; border-collapse: collapse; margin-bottom: 15px;">
           <thead>
             <tr style="background: #f1f5f9; border-bottom: 1px solid #cbd5e1;">
-              <th style="padding: 6px; text-align: left; font-size: 11px; color: #334155;">Description</th>
-              <th style="padding: 6px; text-align: right; font-size: 11px; color: #334155;">Total</th>
+              <th style="padding: 8px; text-align: left; font-size: 11px; color: #334155;">Description</th>
+              <th style="padding: 8px; text-align: right; font-size: 11px; color: #334155;">Total</th>
             </tr>
           </thead>
           <tbody>
@@ -968,7 +1000,7 @@
       currentEstimate.line_items.forEach(item => {
         pdfHtml += `
           <tr style="border-bottom: 1px solid #e2e8f0;">
-            <td style="padding: 8px; font-size: 11px; color: #1e293b;"><span style="color: #d97706; font-family: monospace;">[${item.category}]</span> ${item.description}</td>
+            <td style="padding: 8px; font-size: 11px; color: #1e293b;">[${item.category}] ${item.description}</td>
             <td style="padding: 8px; text-align: right; font-size: 11px; font-weight: bold; color: #1e293b;">$${item.total_cost}</td>
           </tr>
         `;
@@ -986,7 +1018,7 @@
       pdfHtml += `
           </tbody>
         </table>
-        
+
         <div style="width: 260px; margin-left: auto; font-size: 11px; color: #334155; margin-bottom: 20px;">
           <div style="display: flex; justify-content: space-between; padding: 3px 0;"><span>${t.subtotal}</span><span>$${adjustedSubtotal.toFixed(2)}</span></div>
           <div style="display: flex; justify-content: space-between; padding: 3px 0;"><span>${t.tax}</span><span>$${tax.toFixed(2)}</span></div>
@@ -1172,20 +1204,10 @@
       fetchHistory();
     }
 
-    // Direct html2pdf Engine using the clean off-screen PDF container template
+    // 100% Reliable Native Browser Vector Print Engine
     function downloadPDF() {
       if (!currentEstimate) return;
-      const element = document.getElementById('pdfExportContainer');
-
-      const opt = {
-        margin:       10,
-        filename:     `JobSight_${currentEstimate.order_number}.pdf`,
-        image:        { type: 'jpeg', quality: 0.98 },
-        html2canvas:  { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
-        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
-      };
-
-      html2pdf().from(element).set(opt).save();
+      window.print();
     }
 
     function shareProposal() {
