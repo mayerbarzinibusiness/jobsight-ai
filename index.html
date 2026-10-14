@@ -14,7 +14,6 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
   <style>
-    /* Force Android to respect device scale and prevent automatic shrinkage */
     html {
       -webkit-text-size-adjust: 100%;
       text-size-adjust: 100%;
@@ -29,7 +28,6 @@
       overflow-x: hidden;
     }
 
-    /* Larger touch-friendly inputs for mobile */
     input, select, textarea, button {
       font-size: 16px !important;
       -webkit-tap-highlight-color: transparent;
@@ -705,15 +703,13 @@
       if (!currentEstimate) return;
       
       const pdfContainer = document.createElement('div');
-      pdfContainer.style.position = 'fixed';
-      pdfContainer.style.left = '-9999px';
-      pdfContainer.style.top = '0';
       pdfContainer.style.background = '#ffffff';
       pdfContainer.style.color = '#000000';
       pdfContainer.style.padding = '30px';
       pdfContainer.style.fontFamily = 'Arial, sans-serif';
-      pdfContainer.style.fontSize = '12px';
+      pdfContainer.style.fontSize = '13px';
       pdfContainer.style.width = '700px';
+      pdfContainer.style.boxSizing = 'border-box';
 
       let itemsHtml = '';
       let subtotal = currentEstimate.summary.subtotal || 0;
@@ -723,7 +719,7 @@
 
       currentEstimate.line_items.forEach(item => {
         itemsHtml += `
-          <tr style="border-bottom: 1px solid #e2e8f0;">
+          <tr style="border-bottom: 1px solid #cbd5e1;">
             <td style="padding: 10px; color: #000000;">[${item.category}] ${item.description}</td>
             <td style="padding: 10px; text-align: right; color: #000000; font-weight: bold;">$${item.total_cost}</td>
           </tr>
@@ -733,7 +729,7 @@
       const sigDataUrl = (canvas && hasSigned) ? canvas.toDataURL() : '';
 
       pdfContainer.innerHTML = `
-        <div style="display: flex; justify-content: space-between; border-bottom: 2px solid #0f172a; padding-bottom: 15px; margin-bottom: 20px;">
+        <div style="display: flex; justify-content: space-between; border-bottom: 2px solid #0f172a; padding-bottom: 12px; margin-bottom: 20px;">
           <div>
             <h2 style="margin: 0; color: #0f172a; font-size: 20px;">${currentEstimate.company_name}</h2>
             <p style="margin: 4px 0 0 0; color: #475569; font-size: 11px;">Order: <strong>${currentEstimate.order_number}</strong> | Date: ${currentEstimate.created_date}</p>
@@ -747,7 +743,7 @@
         <h3 style="color: #0f172a; font-size: 14px; text-transform: uppercase; margin-bottom: 10px;">Itemized Estimate</h3>
         <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
           <thead>
-            <tr style="background-color: #f1f5f9; border-bottom: 2px solid #cbd5e1;">
+            <tr style="background-color: #f1f5f9; border-bottom: 2px solid #94a3b8;">
               <th style="padding: 10px; text-align: left; color: #0f172a;">Description</th>
               <th style="padding: 10px; text-align: right; color: #0f172a;">Total</th>
             </tr>
@@ -782,21 +778,25 @@
         </div>
       `;
 
+      // Temporarily append the container invisibly to the DOM so mobile browsers can calculate geometry and render canvas items
+      pdfContainer.style.position = 'absolute';
+      pdfContainer.style.left = '0';
+      pdfContainer.style.top = '-9999px';
       document.body.appendChild(pdfContainer);
 
       const opt = {
         margin: 0.3,
         filename: `JobSight_Proposal_${currentEstimate.order_number}.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, scrollX: 0, scrollY: 0 },
+        html2canvas: { scale: 2, useCORS: true, logging: false },
         jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
       };
 
       html2pdf().set(opt).from(pdfContainer).save().then(() => {
-        document.body.removeChild(pdfContainer);
+        pdfContainer.remove();
       }).catch(() => {
         if (document.body.contains(pdfContainer)) {
-          document.body.removeChild(pdfContainer);
+          pdfContainer.remove();
         }
       });
     }
