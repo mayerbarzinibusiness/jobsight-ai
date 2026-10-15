@@ -200,6 +200,35 @@
         
         <textarea id="notesInput" rows="3" placeholder="Type or dictate notes...&#10;Ex: Demo old cabinets, install 100 sq ft tile."></textarea>
 
+        <!-- Material Calculator Widget -->
+        <div class="bg-slate-950 p-3.5 rounded-xl border border-slate-800 space-y-2.5">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-amber-400">📦 Material Count & Cost Calculator</span>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <div>
+              <label class="text-[10px] text-slate-400 block mb-1">Select Material</label>
+              <select id="calcMaterialSelect" class="text-xs py-2">
+                <option value="Drywall Sheet (4x8)">Drywall Sheet ($18 ea)</option>
+                <option value="Shingle Bundle">Shingle Bundle ($35 ea)</option>
+                <option value="Tile (Sq Ft)">Tile / Flooring ($4 / sq ft)</option>
+                <option value="Paint Gallon">Paint Gallon ($45 ea)</option>
+                <option value="Lumber 2x4x8">Lumber 2x4x8 ($8 ea)</option>
+                <option value="PVC Pipe (10ft)">PVC Pipe ($15 ea)</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-[10px] text-slate-400 block mb-1">Quantity / Count</label>
+              <input type="number" id="calcQtyInput" value="10" min="1" class="text-xs py-2 font-bold">
+            </div>
+            <div class="flex items-end">
+              <button onclick="addMaterialToNotes()" class="w-full bg-slate-800 hover:bg-slate-700 text-amber-400 font-bold py-2 rounded-xl text-xs border border-slate-700">
+                ➕ Add to Notes
+              </button>
+            </div>
+          </div>
+        </div>
+
         <!-- Unforeseen / Extras Section -->
         <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2">
           <span class="text-xs font-bold text-amber-400">⚠️ Unforeseen Problems / Extra Allowance (e.g., Leveling Floor, Wood Rot)</span>
@@ -610,6 +639,15 @@
       if (currentEstimate) renderEstimateUI();
     }
 
+    function addMaterialToNotes() {
+      const material = document.getElementById('calcMaterialSelect').value;
+      const qty = document.getElementById('calcQtyInput').value || 1;
+      const notes = document.getElementById('notesInput');
+      
+      const entry = `Install ${qty} x ${material}`;
+      notes.value = notes.value + (notes.value ? '\n' : '') + entry;
+    }
+
     function saveAppointment() {
       const client = document.getElementById('apptClientInput').value.trim();
       const date = document.getElementById('apptDateInput').value;
@@ -789,7 +827,18 @@
         let cost = 150;
         let qty = 1;
 
-        if (text.includes("demo") || text.includes("demolish") || text.includes("remove") || text.includes("demoler")) {
+        // Check for specific quantities from material calculator lines
+        const match = text.match(/install (\d+) x (.+)/);
+        if (match) {
+          qty = parseInt(match[1]) || 1;
+          const matName = match[2].trim();
+          if (matName.includes("drywall")) cost = 18;
+          else if (matName.includes("shingle")) cost = 35;
+          else if (matName.includes("tile")) cost = 4;
+          else if (matName.includes("paint")) cost = 45;
+          else if (matName.includes("lumber")) cost = 8;
+          else if (matName.includes("pvc")) cost = 15;
+        } else if (text.includes("demo") || text.includes("demolish") || text.includes("remove") || text.includes("demoler")) {
           cost = 85; qty = 8;
         } else if (text.includes("tile") || text.includes("floor") || text.includes("sq ft") || text.includes("azulejo") || text.includes("roof") || text.includes("squares") || text.includes("measurement")) {
           cost = 350; qty = 10;
