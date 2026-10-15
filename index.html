@@ -36,7 +36,7 @@
       -webkit-tap-highlight-color: transparent;
     }
 
-    input[type="text"], input[type="number"], input[type="tel"], select, textarea {
+    input[type="text"], input[type="number"], input[type="tel"], input[type="email"], input[type="password"], select, textarea {
       background-color: #090d16;
       border: 1px solid #1e293b;
       color: #f8fafc;
@@ -62,7 +62,6 @@
         color: #000000 !important;
       }
 
-      /* Hide header, navigation, form inputs, map, and action buttons when generating PDF */
       header, footer, #generatorTab > div:not(#outputWrapper), #roofTab, #historyTab, button, .no-print {
         display: none !important;
       }
@@ -80,14 +79,31 @@
         color: #000000 !important;
         background: #ffffff !important;
       }
-
-      .print-border {
-        border-bottom: 1px solid #cbd5e1 !important;
-      }
     }
   </style>
 </head>
 <body class="min-h-screen flex flex-col justify-between">
+
+  <!-- Auth Modal (Forces sign-in before accessing app) -->
+  <div id="authModal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-50 flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 p-6 rounded-2xl max-w-sm w-full space-y-4 text-center shadow-2xl">
+      <div class="w-12 h-12 bg-amber-500/10 border border-amber-500/30 rounded-2xl mx-auto flex items-center justify-center text-xl">🛠️</div>
+      <div>
+        <h2 class="text-base font-bold text-amber-400">JobSight AI Field OS</h2>
+        <p class="text-[11px] text-slate-400 mt-1">Sign in to sync your roofing estimates & client history securely in the cloud.</p>
+      </div>
+      
+      <div class="space-y-3 pt-2">
+        <input type="email" id="authEmail" placeholder="Contractor Email" class="text-xs">
+        <input type="password" id="authPassword" placeholder="Password" class="text-xs">
+      </div>
+      
+      <div class="grid grid-cols-2 gap-2 pt-2">
+        <button onclick="handleSignIn()" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-2.5 rounded-xl text-xs shadow-md">Sign In</button>
+        <button onclick="handleSignUp()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold py-2.5 rounded-xl text-xs border border-slate-700">Sign Up</button>
+      </div>
+    </div>
+  </div>
 
   <!-- Header -->
   <header class="sticky top-0 z-40 bg-slate-950/95 backdrop-blur border-b border-slate-800 p-3 no-print">
@@ -112,6 +128,7 @@
           <button onclick="switchTab('roof')" id="tabRoofBtn" class="text-slate-400 text-xs font-semibold px-2.5 py-1 rounded-md">Roof 📐</button>
           <button onclick="switchTab('history')" id="tabHistBtn" class="text-slate-400 text-xs font-semibold px-2.5 py-1 rounded-md">History</button>
         </div>
+        <button onclick="handleSignOut()" class="bg-rose-950/60 hover:bg-rose-900 text-rose-400 text-xs font-bold px-2.5 py-1.5 rounded-lg border border-rose-900" title="Log Out">🚪</button>
       </div>
     </div>
   </header>
@@ -287,7 +304,7 @@
           <button id="btnPdf" onclick="downloadPDF()" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-3.5 rounded-xl text-xs uppercase tracking-wider shadow-md">📄 Save PDF / Print</button>
           <div class="grid grid-cols-2 gap-2">
             <button id="btnShare" onclick="shareProposal()" class="bg-sky-600 hover:bg-sky-500 text-white font-bold py-3 rounded-xl text-xs">📤 Share</button>
-            <button id="btnSave" onclick="saveEstimate()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl text-xs">💾 Save Local</button>
+            <button id="btnSave" onclick="saveEstimate()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl text-xs">💾 Save Cloud</button>
           </div>
         </div>
       </div>
@@ -339,7 +356,7 @@
     <div id="historyTab" class="hidden space-y-4 no-print">
       <div class="bg-slate-900 p-4 rounded-2xl border border-slate-800 space-y-3 shadow-lg">
         <div class="flex items-center justify-between border-b border-slate-800 pb-2">
-          <h2 id="lblHistoryTitle" class="text-xs font-bold text-slate-200 uppercase">Saved Estimates & History</h2>
+          <h2 id="lblHistoryTitle" class="text-xs font-bold text-slate-200 uppercase">Saved Cloud Estimates</h2>
           <button id="lblRefresh" onclick="fetchHistory()" class="text-xs text-amber-500 underline font-semibold">Refresh</button>
         </div>
 
@@ -349,7 +366,7 @@
         </div>
 
         <div id="historyContainer" class="space-y-2.5">
-          <p id="lblNoHistory" class="text-slate-500 italic text-center py-6 text-xs">Click refresh to load history...</p>
+          <p id="lblNoHistory" class="text-slate-500 italic text-center py-6 text-xs">Loading estimates from cloud...</p>
         </div>
       </div>
     </div>
@@ -381,9 +398,9 @@
         addItem: "+ Item",
         sigTitle: "Client Signature Approval",
         clearSig: "Clear",
-        historyTitle: "Saved Estimates & History",
+        historyTitle: "Saved Cloud Estimates",
         refresh: "Refresh",
-        noHistory: "Click refresh to load history...",
+        noHistory: "No estimates found...",
         termsTitle: "Terms & Conditions:",
         termsText: "Payment due upon completion. Valid for 30 days.",
         contractorSig: "Contractor Signature",
@@ -413,9 +430,9 @@
         addItem: "+ Ítem",
         sigTitle: "Firma y Aprobación del Cliente",
         clearSig: "Borrar",
-        historyTitle: "Presupuestos Guardados e Historial",
+        historyTitle: "Presupuestos en la Nube",
         refresh: "Actualizar",
-        noHistory: "Haga clic en actualizar...",
+        noHistory: "No se encontraron presupuestos...",
         termsTitle: "Términos y Condiciones:",
         termsText: "Pago vencido al finalizar. Válido por 30 días.",
         contractorSig: "Firma del Contratista",
@@ -462,12 +479,64 @@
       if (currentEstimate) renderEstimateUI();
     }
 
-    const SUPABASE_URL = ''; 
-    const SUPABASE_ANON_KEY = ''; 
+    // --- SUPABASE CONFIGURATION ---
+    const SUPABASE_URL = 'YOUR_SUPABASE_URL_HERE';
+    const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY_HERE';
     let supabaseClient = null;
+    let currentUser = null;
+
     if (SUPABASE_URL && SUPABASE_URL.startsWith('http')) {
-      try { supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY); } catch (e) {}
+      try {
+        supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      } catch (e) { console.error(e); }
     }
+
+    // --- AUTHENTICATION FUNCTIONS ---
+    async function handleSignUp() {
+      const email = document.getElementById('authEmail').value;
+      const password = document.getElementById('authPassword').value;
+      if (!email || !password) { alert("Please enter email and password."); return; }
+      
+      const { data, error } = await supabaseClient.auth.signUp({ email, password });
+      if (error) alert(error.message);
+      else alert("Sign up successful! Please check your email to confirm your account before logging in.");
+    }
+
+    async function handleSignIn() {
+      const email = document.getElementById('authEmail').value;
+      const password = document.getElementById('authPassword').value;
+      if (!email || !password) { alert("Please enter email and password."); return; }
+
+      const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+      if (error) alert(error.message);
+      else {
+        currentUser = data.user;
+        document.getElementById('authModal').classList.add('hidden');
+        fetchHistory();
+      }
+    }
+
+    async function handleSignOut() {
+      if (supabaseClient) {
+        await supabaseClient.auth.signOut();
+        currentUser = null;
+        document.getElementById('authModal').classList.remove('hidden');
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', async () => {
+      initSignaturePad();
+      if (customLogoBase64) applyLogoToHeader(customLogoBase64);
+
+      if (supabaseClient) {
+        const { data: { session } } = await supabaseClient.auth.getSession();
+        if (session && session.user) {
+          currentUser = session.user;
+          document.getElementById('authModal').classList.add('hidden');
+          fetchHistory();
+        }
+      }
+    });
 
     let currentEstimate = null;
     let currentSitePhoto = null;
@@ -475,14 +544,12 @@
     let recognition = null;
     let isRecording = false;
 
-    // Leaflet Map & Roofing Variables
     let leafletMap = null;
     let polygonLayer = null;
     let latLngPoints = [];
     let markerLayers = [];
     let rawSquareMeters = 0;
 
-    // Signature Pad Variables
     let canvas, ctx, isDrawing = false, hasSigned = false;
 
     function initSignaturePad() {
@@ -569,13 +636,6 @@
       document.getElementById('sigPlaceholder')?.classList.remove('hidden');
       if (currentEstimate) renderEstimateUI();
     }
-
-    window.addEventListener('DOMContentLoaded', () => {
-      initSignaturePad();
-      if (customLogoBase64) {
-        applyLogoToHeader(customLogoBase64);
-      }
-    });
 
     function handleLogoUpload(event) {
       const file = event.target.files[0];
@@ -896,7 +956,7 @@
       currentEstimate.extra_desc = document.getElementById("extraDescInput")?.value || currentEstimate.extra_desc;
 
       const adjustedSubtotal = subtotal + extraCost;
-      const tax = Math.round(adjustedSubtotal * 0.0825 * 100) / 100; // 8.25% Tax
+      const tax = Math.round(adjustedSubtotal * 0.0825 * 100) / 100;
       const grand_total = Math.round((adjustedSubtotal + tax) * 100) / 100;
 
       const amountPaid = parseFloat(document.getElementById("amountPaidInput")?.value) || currentEstimate.amount_paid || 0;
@@ -911,7 +971,6 @@
       const companyNameVal = document.getElementById("companyNameInput")?.value || currentEstimate.company_name;
       currentEstimate.company_name = companyNameVal;
 
-      // HTML snippet for logo display
       const logoHtmlDark = customLogoBase64 
         ? `<img src="${customLogoBase64}" class="w-10 h-10 object-contain rounded-lg border border-amber-500/50 bg-slate-900 p-0.5 shrink-0">` 
         : '';
@@ -919,7 +978,6 @@
         ? `<img src="${customLogoBase64}" style="max-height: 48px; max-width: 120px; object-fit: contain; margin-right: 12px; vertical-align: middle;">` 
         : '';
 
-      // 1. Render Screen App View (Dark Mode)
       let html = `
         <div class="border-b border-slate-800 pb-2.5 mb-3 flex justify-between items-center gap-2">
           <div class="flex items-center space-x-2.5">
@@ -1004,7 +1062,6 @@
       container.innerHTML = html;
       document.getElementById("remainingBalanceDisplay").innerText = `$${remainingBalance.toFixed(2)}`;
 
-      // 2. Render Printable PDF Container with Company Logo
       const pdfContainer = document.getElementById("printablePdfArea");
       let pdfHtml = `
         <div style="border-bottom: 2px solid #0f172a; padding-bottom: 12px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
@@ -1150,37 +1207,58 @@
       renderEstimateUI();
     }
 
+    // --- CLOUD STORAGE FUNCTIONS ---
     async function saveEstimate() {
-      if (!currentEstimate) return;
-      const sigImage = (canvas && hasSigned) ? canvas.toDataURL() : null;
-      const record = { ...currentEstimate, site_photo: currentSitePhoto, client_signature: sigImage, timestamp: Date.now() };
-
-      let localHistory = JSON.parse(localStorage.getItem('jobsight_estimates') || '[]');
-      
-      const existingIndex = localHistory.findIndex(e => e.order_number === currentEstimate.order_number);
-      if (existingIndex >= 0) {
-        localHistory[existingIndex] = record;
-      } else {
-        localHistory.unshift(record);
+      if (!currentEstimate || !currentUser) {
+        alert("You must be logged in to save to the cloud.");
+        return;
       }
 
-      localStorage.setItem('jobsight_estimates', JSON.stringify(localHistory));
+      const sigImage = (canvas && hasSigned) ? canvas.toDataURL() : null;
+      const record = { 
+        user_id: currentUser.id,
+        order_number: currentEstimate.order_number,
+        company_name: currentEstimate.company_name,
+        client_name: currentEstimate.client_name,
+        client_phone: currentEstimate.client_phone,
+        client_address: currentEstimate.client_address,
+        estimate_data: { ...currentEstimate, site_photo: currentSitePhoto, client_signature: sigImage, timestamp: Date.now() }
+      };
 
       if (supabaseClient) {
-        try { await supabaseClient.from('estimates').insert([{ estimate_data: record }]); } catch (e) {}
+        const { error } = await supabaseClient.from('estimates').upsert(record, { onConflict: 'order_number' });
+        if (error) {
+          alert("Error saving to cloud: " + error.message);
+        } else {
+          alert(currentLang === 'es' ? "¡Guardado en la nube con éxito!" : "Estimate saved to cloud successfully!");
+          fetchHistory();
+        }
       }
-
-      alert(currentLang === 'es' ? "¡Guardado con éxito!" : "Estimate saved successfully!");
     }
 
     async function fetchHistory() {
-      renderHistoryList(JSON.parse(localStorage.getItem('jobsight_estimates') || '[]'));
+      if (!currentUser || !supabaseClient) return;
+
+      const { data, error } = await supabaseClient
+        .from('estimates')
+        .select('*')
+        .eq('user_id', currentUser.id)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error(error);
+        return;
+      }
+
+      const records = data.map(row => row.estimate_data);
+      window.cloudRecordsCache = records;
+      renderHistoryList(records);
     }
 
     function renderHistoryList(allRecords) {
       const container = document.getElementById("historyContainer");
 
-      if (allRecords.length > 0) {
+      if (allRecords && allRecords.length > 0) {
         let html = '';
         allRecords.forEach((est, idx) => {
           html += `<div class="bg-slate-950 p-3 rounded-xl border border-slate-800 flex justify-between items-center gap-2">
@@ -1197,8 +1275,8 @@
                 <span class="font-extrabold text-emerald-400 text-xs block">$${est.summary?.grand_total || 0}</span>
                 <span class="text-[9px] text-rose-400 block">Bal: $${est.summary?.remaining_balance ?? est.summary?.grand_total ?? 0}</span>
               </div>
-              <button onclick="reopenEstimate(${idx})" class="bg-slate-800 hover:bg-slate-700 text-amber-400 text-xs px-2 py-1.5 rounded-lg font-bold" title="Edit & Reopen">✏️</button>
-              <button onclick="deleteEstimate(${idx})" class="bg-rose-950/60 hover:bg-rose-900 text-rose-400 text-xs px-2 py-1.5 rounded-lg" title="Delete">🗑️</button>
+              <button onclick="reopenEstimateCached(${idx})" class="bg-slate-800 hover:bg-slate-700 text-amber-400 text-xs px-2 py-1.5 rounded-lg font-bold" title="Edit & Reopen">✏️</button>
+              <button onclick="deleteCloudEstimate('${est.order_number}')" class="bg-rose-950/60 hover:bg-rose-900 text-rose-400 text-xs px-2 py-1.5 rounded-lg" title="Delete">🗑️</button>
             </div>
           </div>`;
         });
@@ -1210,14 +1288,14 @@
 
     function filterHistory() {
       const query = document.getElementById("historySearchInput").value.toLowerCase().trim();
-      let localHistory = JSON.parse(localStorage.getItem('jobsight_estimates') || '[]');
+      const records = window.cloudRecordsCache || [];
 
       if (!query) {
-        renderHistoryList(localHistory);
+        renderHistoryList(records);
         return;
       }
 
-      const filtered = localHistory.filter(est => {
+      const filtered = records.filter(est => {
         const clientName = (est.client_name || '').toLowerCase();
         const orderNum = (est.order_number || '').toLowerCase();
         const phone = (est.client_phone || '').toLowerCase();
@@ -1230,11 +1308,11 @@
       renderHistoryList(filtered);
     }
 
-    function reopenEstimate(index) {
-      let localHistory = JSON.parse(localStorage.getItem('jobsight_estimates') || '[]');
-      if (!localHistory[index]) return;
+    function reopenEstimateCached(index) {
+      const records = window.cloudRecordsCache || [];
+      if (!records[index]) return;
 
-      currentEstimate = localHistory[index];
+      currentEstimate = records[index];
       document.getElementById('companyNameInput').value = currentEstimate.company_name;
       document.getElementById('clientNameInput').value = currentEstimate.client_name;
       document.getElementById('clientPhoneInput').value = currentEstimate.client_phone || '';
@@ -1257,15 +1335,15 @@
       switchTab('generator');
     }
 
-    function deleteEstimate(index) {
-      if (!confirm("Are you sure you want to delete this saved estimate?")) return;
-      let localHistory = JSON.parse(localStorage.getItem('jobsight_estimates') || '[]');
-      localHistory.splice(index, 1);
-      localStorage.setItem('jobsight_estimates', JSON.stringify(localHistory));
-      fetchHistory();
+    async function deleteCloudEstimate(orderNumber) {
+      if (!confirm("Are you sure you want to delete this estimate from the cloud?")) return;
+      if (supabaseClient && currentUser) {
+        const { error } = await supabaseClient.from('estimates').delete().eq('order_number', orderNumber).eq('user_id', currentUser.id);
+        if (error) alert("Error deleting: " + error.message);
+        else fetchHistory();
+      }
     }
 
-    // Native Browser Vector Print Engine
     function downloadPDF() {
       if (!currentEstimate) return;
       window.print();
