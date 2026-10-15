@@ -57,7 +57,7 @@
         color: #000000 !important;
       }
 
-      header, footer, #generatorTab > div:not(#outputWrapper), #calendarTab, #historyTab, button, .no-print {
+      header, footer, #generatorTab > div:not(#outputWrapper), #calculatorTab, #calendarTab, #historyTab, button, .no-print {
         display: none !important;
       }
 
@@ -96,15 +96,16 @@
         </div>
       </div>
 
-      <div class="flex items-center space-x-2 shrink-0">
+      <div class="flex items-center space-x-1.5 shrink-0">
         <select id="langSelect" onchange="switchLanguage(this.value)" class="!w-auto bg-slate-900 text-amber-400 text-xs font-bold px-2 py-1.5 rounded-lg">
           <option value="en">🇺🇸 EN</option>
           <option value="es">🇪🇸 ES</option>
         </select>
-        <div class="flex bg-slate-900 p-1 rounded-lg border border-slate-800">
-          <button onclick="switchTab('generator')" id="tabGenBtn" class="bg-amber-500 text-slate-950 text-xs font-bold px-2.5 py-1 rounded-md">Gen</button>
-          <button onclick="switchTab('calendar')" id="tabCalBtn" class="text-slate-400 text-xs font-semibold px-2.5 py-1 rounded-md">Calendar 📅</button>
-          <button onclick="switchTab('history')" id="tabHistBtn" class="text-slate-400 text-xs font-semibold px-2.5 py-1 rounded-md">History</button>
+        <div class="flex bg-slate-900 p-1 rounded-lg border border-slate-800 overflow-x-auto">
+          <button onclick="switchTab('generator')" id="tabGenBtn" class="bg-amber-500 text-slate-950 text-xs font-bold px-2 py-1 rounded-md">Gen</button>
+          <button onclick="switchTab('calculator')" id="tabCalcBtn" class="text-slate-400 text-xs font-semibold px-2 py-1 rounded-md">Calc 🧮</button>
+          <button onclick="switchTab('calendar')" id="tabCalBtn" class="text-slate-400 text-xs font-semibold px-2 py-1 rounded-md">Cal 📅</button>
+          <button onclick="switchTab('history')" id="tabHistBtn" class="text-slate-400 text-xs font-semibold px-2 py-1 rounded-md">Hist</button>
         </div>
       </div>
     </div>
@@ -200,35 +201,6 @@
         
         <textarea id="notesInput" rows="3" placeholder="Type or dictate notes...&#10;Ex: Demo old cabinets, install 100 sq ft tile."></textarea>
 
-        <!-- Material Calculator Widget -->
-        <div class="bg-slate-950 p-3.5 rounded-xl border border-slate-800 space-y-2.5">
-          <div class="flex items-center justify-between">
-            <span class="text-xs font-bold text-amber-400">📦 Material Count & Cost Calculator</span>
-          </div>
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
-            <div>
-              <label class="text-[10px] text-slate-400 block mb-1">Select Material</label>
-              <select id="calcMaterialSelect" class="text-xs py-2">
-                <option value="Drywall Sheet (4x8)">Drywall Sheet ($18 ea)</option>
-                <option value="Shingle Bundle">Shingle Bundle ($35 ea)</option>
-                <option value="Tile (Sq Ft)">Tile / Flooring ($4 / sq ft)</option>
-                <option value="Paint Gallon">Paint Gallon ($45 ea)</option>
-                <option value="Lumber 2x4x8">Lumber 2x4x8 ($8 ea)</option>
-                <option value="PVC Pipe (10ft)">PVC Pipe ($15 ea)</option>
-              </select>
-            </div>
-            <div>
-              <label class="text-[10px] text-slate-400 block mb-1">Quantity / Count</label>
-              <input type="number" id="calcQtyInput" value="10" min="1" class="text-xs py-2 font-bold">
-            </div>
-            <div class="flex items-end">
-              <button onclick="addMaterialToNotes()" class="w-full bg-slate-800 hover:bg-slate-700 text-amber-400 font-bold py-2 rounded-xl text-xs border border-slate-700">
-                ➕ Add to Notes
-              </button>
-            </div>
-          </div>
-        </div>
-
         <!-- Unforeseen / Extras Section -->
         <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2">
           <span class="text-xs font-bold text-amber-400">⚠️ Unforeseen Problems / Extra Allowance (e.g., Leveling Floor, Wood Rot)</span>
@@ -317,7 +289,56 @@
 
     </div>
 
-    <!-- TAB 2: CALENDAR & APPOINTMENTS -->
+    <!-- TAB 2: CALCULATOR -->
+    <div id="calculatorTab" class="hidden space-y-4 no-print">
+      <div class="bg-slate-900 p-4 rounded-2xl border border-slate-800 space-y-3 shadow-lg">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+          <div class="flex items-center space-x-2">
+            <span class="text-amber-500 font-mono text-xs font-bold">🧮</span>
+            <h2 class="text-xs font-bold text-amber-400 uppercase tracking-wide">Material & Room Measurement Calculator</h2>
+          </div>
+        </div>
+
+        <p class="text-[11px] text-slate-400">
+          Calculate precise counts for drywall, flooring, tile, and paint based on room dimensions.
+        </p>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+          <div>
+            <label class="text-slate-400 block mb-1">Length (ft)</label>
+            <input type="number" id="calcLength" value="12" class="text-xs py-2 font-bold">
+          </div>
+          <div>
+            <label class="text-slate-400 block mb-1">Width (ft)</label>
+            <input type="number" id="calcWidth" value="10" class="text-xs py-2 font-bold">
+          </div>
+          <div>
+            <label class="text-slate-400 block mb-1">Height (ft)</label>
+            <input type="number" id="calcHeight" value="9" class="text-xs py-2 font-bold">
+          </div>
+        </div>
+
+        <button onclick="runMaterialCalculator()" class="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-2.5 rounded-xl text-xs uppercase tracking-wider">
+          Calculate Quantities
+        </button>
+
+        <div id="calcResultsBox" class="hidden bg-slate-950 p-3.5 rounded-xl border border-slate-800 space-y-2 text-xs">
+          <p class="font-bold text-amber-400 border-b border-slate-800 pb-1.5">Calculated Estimates:</p>
+          <div id="calcOutputList" class="space-y-1.5 text-slate-300"></div>
+        </div>
+
+        <div class="flex space-x-2 pt-2">
+          <button onclick="exportCalculatorResults()" class="flex-1 bg-sky-600 hover:bg-sky-500 text-white font-bold py-2.5 rounded-xl text-xs">
+            📥 Export Calculation
+          </button>
+          <button onclick="sendCalcToNotes()" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 rounded-xl text-xs">
+            ➕ Send to Proposal Notes
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 3: CALENDAR & APPOINTMENTS -->
     <div id="calendarTab" class="hidden space-y-4 no-print">
       <div class="bg-slate-900 p-4 rounded-2xl border border-slate-800 space-y-3 shadow-lg">
         <div class="flex items-center justify-between border-b border-slate-800 pb-2">
@@ -373,7 +394,7 @@
       </div>
     </div>
 
-    <!-- TAB 3: HISTORY -->
+    <!-- TAB 4: HISTORY -->
     <div id="historyTab" class="hidden space-y-4 no-print">
       <div class="bg-slate-900 p-4 rounded-2xl border border-slate-800 space-y-3 shadow-lg">
         <div class="flex items-center justify-between border-b border-slate-800 pb-2">
@@ -403,8 +424,9 @@
       en: {
         subHeader: "Field Operations & Scheduling Engine",
         tabGen: "Gen",
-        tabCal: "Calendar 📅",
-        tabHist: "History",
+        tabCalc: "Calc 🧮",
+        tabCal: "Cal 📅",
+        tabHist: "Hist",
         detailsTitle: "Proposal Details & Logo",
         company: "Company Name",
         client: "Client Name",
@@ -435,8 +457,9 @@
       es: {
         subHeader: "Motor de Operaciones y Agenda",
         tabGen: "Gen",
-        tabCal: "Calendario 📅",
-        tabHist: "Historial",
+        tabCalc: "Calc 🧮",
+        tabCal: "Cal 📅",
+        tabHist: "Hist",
         detailsTitle: "Detalles de Propuesta y Logo",
         company: "Nombre de la Empresa",
         client: "Nombre del Cliente",
@@ -474,6 +497,7 @@
 
       document.getElementById('subHeader').innerText = t.subHeader;
       document.getElementById('tabGenBtn').innerText = t.tabGen;
+      document.getElementById('tabCalcBtn').innerText = t.tabCalc;
       document.getElementById('tabCalBtn').innerText = t.tabCal;
       document.getElementById('tabHistBtn').innerText = t.tabHist;
       document.getElementById('lblDetailsTitle').innerText = t.detailsTitle;
@@ -639,13 +663,54 @@
       if (currentEstimate) renderEstimateUI();
     }
 
-    function addMaterialToNotes() {
-      const material = document.getElementById('calcMaterialSelect').value;
-      const qty = document.getElementById('calcQtyInput').value || 1;
+    function runMaterialCalculator() {
+      const L = parseFloat(document.getElementById('calcLength').value) || 0;
+      const W = parseFloat(document.getElementById('calcWidth').value) || 0;
+      const H = parseFloat(document.getElementById('calcHeight').value) || 0;
+
+      const floorArea = L * W;
+      const perimeter = 2 * (L + W);
+      const wallArea = perimeter * H;
+      const drywallSheets = Math.ceil(wallArea / 32);
+      const paintGallons = Math.ceil(wallArea / 350);
+      const flooringSqFt = Math.ceil(floorArea * 1.1); // 10% waste
+
+      const resultsHtml = `
+        <p>📐 <strong>Floor Area:</strong> ${floorArea} sq ft</p>
+        <p>🧱 <strong>Wall Area:</strong> ${wallArea} sq ft</p>
+        <p>📋 <strong>Drywall Sheets (4x8):</strong> ~${drywallSheets} sheets</p>
+        <p>🎨 <strong>Paint (Gallons):</strong> ~${paintGallons} gallons (2 coats)</p>
+        <p>🪵 <strong>Flooring / Tile:</strong> ~${flooringSqFt} sq ft (incl. 10% waste)</p>
+      `;
+
+      document.getElementById('calcOutputList').innerHTML = resultsHtml;
+      document.getElementById('calcResultsBox').classList.remove('hidden');
+    }
+
+    function exportCalculatorResults() {
+      const output = document.getElementById('calcOutputList').innerText;
+      if (!output) {
+        alert("Please run the calculator first.");
+        return;
+      }
+      const blob = new Blob([output], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'Material_Calculation.txt';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function sendCalcToNotes() {
+      const output = document.getElementById('calcOutputList').innerText;
+      if (!output) {
+        alert("Please run the calculator first.");
+        return;
+      }
       const notes = document.getElementById('notesInput');
-      
-      const entry = `Install ${qty} x ${material}`;
-      notes.value = notes.value + (notes.value ? '\n' : '') + entry;
+      notes.value = notes.value + (notes.value ? '\n' : '') + "Material Calc:\n" + output;
+      switchTab('generator');
     }
 
     function saveAppointment() {
@@ -773,29 +838,36 @@
 
     function switchTab(tab) {
       const genTab = document.getElementById('generatorTab');
+      const calcTab = document.getElementById('calculatorTab');
       const calTab = document.getElementById('calendarTab');
       const histTab = document.getElementById('historyTab');
       const genBtn = document.getElementById('tabGenBtn');
+      const calcBtn = document.getElementById('tabCalcBtn');
       const calBtn = document.getElementById('tabCalBtn');
       const histBtn = document.getElementById('tabHistBtn');
 
       genTab.classList.add('hidden');
+      calcTab.classList.add('hidden');
       calTab.classList.add('hidden');
       histTab.classList.add('hidden');
-      genBtn.className = "text-slate-400 text-xs font-semibold px-2.5 py-1 rounded-md";
-      calBtn.className = "text-slate-400 text-xs font-semibold px-2.5 py-1 rounded-md";
-      histBtn.className = "text-slate-400 text-xs font-semibold px-2.5 py-1 rounded-md";
+      genBtn.className = "text-slate-400 text-xs font-semibold px-2 py-1 rounded-md";
+      calcBtn.className = "text-slate-400 text-xs font-semibold px-2 py-1 rounded-md";
+      calBtn.className = "text-slate-400 text-xs font-semibold px-2 py-1 rounded-md";
+      histBtn.className = "text-slate-400 text-xs font-semibold px-2 py-1 rounded-md";
 
       if (tab === 'generator') {
         genTab.classList.remove('hidden');
-        genBtn.className = "bg-amber-500 text-slate-950 text-xs font-bold px-2.5 py-1 rounded-md";
+        genBtn.className = "bg-amber-500 text-slate-950 text-xs font-bold px-2 py-1 rounded-md";
+      } else if (tab === 'calculator') {
+        calcTab.classList.remove('hidden');
+        calcBtn.className = "bg-amber-500 text-slate-950 text-xs font-bold px-2 py-1 rounded-md";
       } else if (tab === 'calendar') {
         calTab.classList.remove('hidden');
-        calBtn.className = "bg-amber-500 text-slate-950 text-xs font-bold px-2.5 py-1 rounded-md";
+        calBtn.className = "bg-amber-500 text-slate-950 text-xs font-bold px-2 py-1 rounded-md";
         fetchAppointments();
       } else {
         histTab.classList.remove('hidden');
-        histBtn.className = "bg-amber-500 text-slate-950 text-xs font-bold px-2.5 py-1 rounded-md";
+        histBtn.className = "bg-amber-500 text-slate-950 text-xs font-bold px-2 py-1 rounded-md";
         fetchHistory();
       }
     }
@@ -827,18 +899,7 @@
         let cost = 150;
         let qty = 1;
 
-        // Check for specific quantities from material calculator lines
-        const match = text.match(/install (\d+) x (.+)/);
-        if (match) {
-          qty = parseInt(match[1]) || 1;
-          const matName = match[2].trim();
-          if (matName.includes("drywall")) cost = 18;
-          else if (matName.includes("shingle")) cost = 35;
-          else if (matName.includes("tile")) cost = 4;
-          else if (matName.includes("paint")) cost = 45;
-          else if (matName.includes("lumber")) cost = 8;
-          else if (matName.includes("pvc")) cost = 15;
-        } else if (text.includes("demo") || text.includes("demolish") || text.includes("remove") || text.includes("demoler")) {
+        if (text.includes("demo") || text.includes("demolish") || text.includes("remove") || text.includes("demoler")) {
           cost = 85; qty = 8;
         } else if (text.includes("tile") || text.includes("floor") || text.includes("sq ft") || text.includes("azulejo") || text.includes("roof") || text.includes("squares") || text.includes("measurement")) {
           cost = 350; qty = 10;
