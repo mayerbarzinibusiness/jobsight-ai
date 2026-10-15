@@ -36,7 +36,7 @@
       -webkit-tap-highlight-color: transparent;
     }
 
-    input[type="text"], input[type="number"], select, textarea {
+    input[type="text"], input[type="number"], input[type="tel"], select, textarea {
       background-color: #090d16;
       border: 1px solid #1e293b;
       color: #f8fafc;
@@ -150,15 +150,20 @@
             <button onclick="removeLogo()" class="text-rose-400 text-xs underline font-semibold">Remove Logo</button>
           </div>
 
-          <div class="grid grid-cols-1 gap-3">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label id="lblClient" class="text-xs text-slate-400 block mb-1">Client Name</label>
               <input type="text" id="clientNameInput" value="John Smith">
             </div>
             <div>
-              <label id="lblAddress" class="text-xs text-slate-400 block mb-1">Job Address</label>
-              <input type="text" id="clientAddressInput" value="123 Maple Street, Austin TX" onchange="geocodeAndCenterMap()">
+              <label id="lblPhone" class="text-xs text-slate-400 block mb-1">Client Phone</label>
+              <input type="tel" id="clientPhoneInput" placeholder="(512) 555-0199">
             </div>
+          </div>
+
+          <div>
+            <label id="lblAddress" class="text-xs text-slate-400 block mb-1">Job Address</label>
+            <input type="text" id="clientAddressInput" value="123 Maple Street, Austin TX" onchange="geocodeAndCenterMap()">
           </div>
 
           <div>
@@ -337,6 +342,12 @@
           <h2 id="lblHistoryTitle" class="text-xs font-bold text-slate-200 uppercase">Saved Estimates & History</h2>
           <button id="lblRefresh" onclick="fetchHistory()" class="text-xs text-amber-500 underline font-semibold">Refresh</button>
         </div>
+
+        <!-- Live Search Bar -->
+        <div class="relative">
+          <input type="text" id="historySearchInput" onkeyup="filterHistory()" placeholder="🔍 Search name, job #, phone, address..." class="text-xs py-2.5 px-3 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 placeholder-slate-500 w-full focus:border-amber-500">
+        </div>
+
         <div id="historyContainer" class="space-y-2.5">
           <p id="lblNoHistory" class="text-slate-500 italic text-center py-6 text-xs">Click refresh to load history...</p>
         </div>
@@ -359,6 +370,7 @@
         detailsTitle: "Proposal Details & Logo",
         company: "Company Name",
         client: "Client Name",
+        phone: "Client Phone",
         address: "Job Address",
         area: "Job Area / Focus",
         notesTitle: "Walkthrough Notes & Extras",
@@ -390,6 +402,7 @@
         detailsTitle: "Detalles de Propuesta y Logo",
         company: "Nombre de la Empresa",
         client: "Nombre del Cliente",
+        phone: "Teléfono del Cliente",
         address: "Dirección del Trabajo",
         area: "Área de Trabajo",
         notesTitle: "Notas de Inspección y Extras",
@@ -428,6 +441,7 @@
       document.getElementById('lblDetailsTitle').innerText = t.detailsTitle;
       document.getElementById('lblCompany').innerText = t.company;
       document.getElementById('lblClient').innerText = t.client;
+      document.getElementById('lblPhone').innerText = t.phone;
       document.getElementById('lblAddress').innerText = t.address;
       document.getElementById('lblArea').innerText = t.area;
       document.getElementById('lblNotesTitle').innerText = t.notesTitle;
@@ -804,6 +818,7 @@
       const input = document.getElementById("notesInput").value;
       const companyName = document.getElementById("companyNameInput").value || "ProBuild Services";
       const clientName = document.getElementById("clientNameInput").value || "Residential Client";
+      const clientPhone = document.getElementById("clientPhoneInput").value || "";
       const clientAddress = document.getElementById("clientAddressInput").value || "123 Maple Street, Austin TX";
       const roomCategory = document.getElementById("roomCategorySelect").value;
 
@@ -848,6 +863,7 @@
         order_number: orderNumber,
         company_name: companyName,
         client_name: clientName,
+        client_phone: clientPhone,
         client_address: clientAddress,
         room_category: roomCategory,
         created_date: formattedDate,
@@ -913,7 +929,7 @@
                 <p class="text-amber-400 font-bold text-xs">${currentEstimate.company_name}</p>
                 <span class="bg-amber-500/10 text-amber-400 border border-amber-500/30 text-[9px] px-1.5 py-0.5 rounded font-mono font-bold">${currentEstimate.order_number}</span>
               </div>
-              <p class="text-[11px] text-slate-400 mt-0.5">Client: <strong class="text-slate-200">${currentEstimate.client_name}</strong></p>
+              <p class="text-[11px] text-slate-400 mt-0.5">Client: <strong class="text-slate-200">${currentEstimate.client_name}</strong> ${currentEstimate.client_phone ? '&bull; ' + currentEstimate.client_phone : ''}</p>
             </div>
           </div>
           <div class="text-right shrink-0">
@@ -992,7 +1008,7 @@
       const pdfContainer = document.getElementById("printablePdfArea");
       let pdfHtml = `
         <div style="border-bottom: 2px solid #0f172a; padding-bottom: 12px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
-          <div style="display: flex; items-center;">
+          <div style="display: flex; align-items: center;">
             ${logoHtmlLight}
             <div>
               <h2 style="font-size: 20px; font-weight: bold; color: #0f172a; margin: 0;">${currentEstimate.company_name}</h2>
@@ -1000,7 +1016,7 @@
             </div>
           </div>
           <div style="text-align: right;">
-            <p style="font-size: 11px; color: #475569; margin: 0;">Client: <strong>${currentEstimate.client_name}</strong><br>${currentEstimate.client_address}</p>
+            <p style="font-size: 11px; color: #475569; margin: 0;">Client: <strong>${currentEstimate.client_name}</strong><br>${currentEstimate.client_phone ? currentEstimate.client_phone + '<br>' : ''}${currentEstimate.client_address}</p>
           </div>
         </div>
 
@@ -1158,8 +1174,11 @@
     }
 
     async function fetchHistory() {
+      renderHistoryList(JSON.parse(localStorage.getItem('jobsight_estimates') || '[]'));
+    }
+
+    function renderHistoryList(allRecords) {
       const container = document.getElementById("historyContainer");
-      let allRecords = JSON.parse(localStorage.getItem('jobsight_estimates') || '[]');
 
       if (allRecords.length > 0) {
         let html = '';
@@ -1170,7 +1189,7 @@
                 <p class="font-bold text-amber-400 text-xs">${est.company_name} - ${est.client_name}</p>
                 <span class="bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[9px] px-1 py-0.5 rounded font-mono">${est.order_number || '#JS-0000'}</span>
               </div>
-              <p class="text-[10px] text-slate-400 mt-0.5">${est.client_address}</p>
+              <p class="text-[10px] text-slate-400 mt-0.5">${est.client_address || ''} ${est.client_phone ? '&bull; 📞 ' + est.client_phone : ''}</p>
               <p class="text-[9px] text-amber-500/80 mt-0.5">${est.created_date || ''} ${est.created_time ? '&bull; ' + est.created_time : ''}</p>
             </div>
             <div class="text-right shrink-0 flex items-center space-x-2">
@@ -1189,6 +1208,28 @@
       }
     }
 
+    function filterHistory() {
+      const query = document.getElementById("historySearchInput").value.toLowerCase().trim();
+      let localHistory = JSON.parse(localStorage.getItem('jobsight_estimates') || '[]');
+
+      if (!query) {
+        renderHistoryList(localHistory);
+        return;
+      }
+
+      const filtered = localHistory.filter(est => {
+        const clientName = (est.client_name || '').toLowerCase();
+        const orderNum = (est.order_number || '').toLowerCase();
+        const phone = (est.client_phone || '').toLowerCase();
+        const address = (est.client_address || '').toLowerCase();
+        const company = (est.company_name || '').toLowerCase();
+
+        return clientName.includes(query) || orderNum.includes(query) || phone.includes(query) || address.includes(query) || company.includes(query);
+      });
+
+      renderHistoryList(filtered);
+    }
+
     function reopenEstimate(index) {
       let localHistory = JSON.parse(localStorage.getItem('jobsight_estimates') || '[]');
       if (!localHistory[index]) return;
@@ -1196,6 +1237,7 @@
       currentEstimate = localHistory[index];
       document.getElementById('companyNameInput').value = currentEstimate.company_name;
       document.getElementById('clientNameInput').value = currentEstimate.client_name;
+      document.getElementById('clientPhoneInput').value = currentEstimate.client_phone || '';
       document.getElementById('clientAddressInput').value = currentEstimate.client_address;
       document.getElementById('roomCategorySelect').value = currentEstimate.room_category || 'General & Whole House';
       document.getElementById('extraDescInput').value = currentEstimate.extra_desc || '';
