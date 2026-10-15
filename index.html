@@ -10,6 +10,11 @@
   <meta name="theme-color" content="#020617">
 
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <!-- Leaflet CSS & JS for Free Open-Source Satellite Maps -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
   <style>
     html {
@@ -31,7 +36,7 @@
       -webkit-tap-highlight-color: transparent;
     }
 
-    input[type="text"], input[type="number"], input[type="tel"], input[type="date"], input[type="time"], select, textarea {
+    input[type="text"], input[type="number"], select, textarea {
       background-color: #090d16;
       border: 1px solid #1e293b;
       color: #f8fafc;
@@ -57,7 +62,8 @@
         color: #000000 !important;
       }
 
-      header, footer, #generatorTab > div:not(#outputWrapper), #calendarTab, #historyTab, button, .no-print {
+      /* Hide header, navigation, form inputs, map, and action buttons when generating PDF */
+      header, footer, #generatorTab > div:not(#outputWrapper), #roofTab, #historyTab, button, .no-print {
         display: none !important;
       }
 
@@ -74,6 +80,10 @@
         color: #000000 !important;
         background: #ffffff !important;
       }
+
+      .print-border {
+        border-bottom: 1px solid #cbd5e1 !important;
+      }
     }
   </style>
 </head>
@@ -88,7 +98,7 @@
         </div>
         <div class="truncate">
           <h1 class="text-base font-bold text-amber-500 leading-tight">JobSight AI</h1>
-          <p id="subHeader" class="text-[11px] text-slate-400 truncate">Field Operations & Scheduling Engine</p>
+          <p id="subHeader" class="text-[11px] text-slate-400 truncate">Field Operations & Roofing Engine</p>
         </div>
       </div>
 
@@ -99,7 +109,7 @@
         </select>
         <div class="flex bg-slate-900 p-1 rounded-lg border border-slate-800">
           <button onclick="switchTab('generator')" id="tabGenBtn" class="bg-amber-500 text-slate-950 text-xs font-bold px-2.5 py-1 rounded-md">Gen</button>
-          <button onclick="switchTab('calendar')" id="tabCalBtn" class="text-slate-400 text-xs font-semibold px-2.5 py-1 rounded-md">Schedule 📅</button>
+          <button onclick="switchTab('roof')" id="tabRoofBtn" class="text-slate-400 text-xs font-semibold px-2.5 py-1 rounded-md">Roof 📐</button>
           <button onclick="switchTab('history')" id="tabHistBtn" class="text-slate-400 text-xs font-semibold px-2.5 py-1 rounded-md">History</button>
         </div>
       </div>
@@ -140,23 +150,15 @@
             <button onclick="removeLogo()" class="text-rose-400 text-xs underline font-semibold">Remove Logo</button>
           </div>
 
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div class="grid grid-cols-1 gap-3">
             <div>
               <label id="lblClient" class="text-xs text-slate-400 block mb-1">Client Name</label>
               <input type="text" id="clientNameInput" value="John Smith">
             </div>
             <div>
-              <label id="lblPhone" class="text-xs text-slate-400 block mb-1">Client Phone</label>
-              <input type="tel" id="clientPhoneInput" placeholder="(512) 555-0199">
+              <label id="lblAddress" class="text-xs text-slate-400 block mb-1">Job Address</label>
+              <input type="text" id="clientAddressInput" value="123 Maple Street, Austin TX" onchange="geocodeAndCenterMap()">
             </div>
-          </div>
-
-          <div>
-            <div class="flex justify-between items-center mb-1">
-              <label id="lblAddress" class="text-xs text-slate-400 block">Job Address</label>
-              <button onclick="openTurnByTurnDirections()" class="text-[10px] text-sky-400 font-bold hover:underline">🚗 Navigate to Job</button>
-            </div>
-            <input type="text" id="clientAddressInput" value="123 Maple Street, Austin TX">
           </div>
 
           <div>
@@ -287,85 +289,54 @@
 
     </div>
 
-    <!-- TAB 2: CALENDAR & APPOINTMENT SCHEDULER -->
-    <div id="calendarTab" class="hidden space-y-4 no-print">
-      
-      <!-- New Appointment Form -->
-      <div class="bg-slate-900 p-4 rounded-2xl border border-slate-800 space-y-3 shadow-lg">
-        <div class="flex items-center space-x-2 border-b border-slate-800 pb-2">
-          <span class="text-amber-500 font-mono text-xs font-bold">📅</span>
-          <h2 class="text-xs font-bold text-amber-400 uppercase tracking-wide">Schedule Job Site Appointment</h2>
-        </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-          <div>
-            <label class="text-slate-400 block mb-1">Appointment Date</label>
-            <input type="date" id="apptDateInput" class="text-xs font-bold">
-          </div>
-          <div>
-            <label class="text-slate-400 block mb-1">Time Slot</label>
-            <input type="time" id="apptTimeInput" class="text-xs font-bold">
-          </div>
-        </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-          <div>
-            <label class="text-slate-400 block mb-1">Client Name</label>
-            <input type="text" id="apptClientInput" placeholder="Ex: Sarah Johnson">
-          </div>
-          <div>
-            <label class="text-slate-400 block mb-1">Client Phone</label>
-            <input type="tel" id="apptPhoneInput" placeholder="(512) 555-0199">
-          </div>
-        </div>
-
-        <div>
-          <label class="text-slate-400 block mb-1">Job Address</label>
-          <input type="text" id="apptAddressInput" placeholder="Ex: 456 Oak Lane, Austin TX">
-        </div>
-
-        <div>
-          <label class="text-slate-400 block mb-1">Job Type / Purpose</label>
-          <select id="apptTypeSelect" class="text-amber-400 font-bold">
-            <option value="Initial Site Inspection">Initial Site Inspection</option>
-            <option value="Roof Estimate Inspection">Roof Estimate Inspection</option>
-            <option value="Final Walkthrough">Final Walkthrough & Signing</option>
-            <option value="Maintenance Service">Maintenance Service Call</option>
-          </select>
-        </div>
-
-        <button onclick="saveAppointment()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold py-3 rounded-xl text-xs uppercase tracking-wider">
-          📅 Book Appointment
-        </button>
-      </div>
-
-      <!-- Booked Appointments Agenda List -->
+    <!-- TAB 2: BIRD'S EYE ROOF MEASUREMENT -->
+    <div id="roofTab" class="hidden space-y-4 no-print">
       <div class="bg-slate-900 p-4 rounded-2xl border border-slate-800 space-y-3 shadow-lg">
         <div class="flex items-center justify-between border-b border-slate-800 pb-2">
-          <h2 class="text-xs font-bold text-slate-200 uppercase tracking-wide">Upcoming Field Schedule</h2>
-          <span id="apptCountBadge" class="bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[10px] px-2 py-0.5 rounded font-bold">0 Booked</span>
+          <div class="flex items-center space-x-2">
+            <span class="text-amber-500 font-mono text-xs font-bold">📐</span>
+            <h2 class="text-xs font-bold text-amber-400 uppercase tracking-wide">Bird's Eye Roof Measurer</h2>
+          </div>
+          <button onclick="resetRoofMeasurement()" class="text-xs text-rose-400 underline font-semibold">Reset Points</button>
         </div>
 
-        <div id="appointmentsContainer" class="space-y-2.5">
-          <p class="text-slate-500 italic text-center py-6 text-xs">No upcoming appointments scheduled yet.</p>
+        <p class="text-[11px] text-slate-400">
+          Tap around the roof perimeter on the satellite map below to plot corners. Area calculates instantly.
+        </p>
+
+        <!-- Map Container -->
+        <div id="map" class="w-full h-80 rounded-xl border border-slate-800 z-10"></div>
+
+        <!-- Measurement Readout -->
+        <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2 text-xs">
+          <div class="flex justify-between">
+            <span class="text-slate-400">Measured Area:</span>
+            <span id="roofSqFtDisplay" class="font-bold text-amber-400">0 sq ft (0 Squares)</span>
+          </div>
+          <div>
+            <label class="text-[10px] text-slate-500 block mb-1">Roof Pitch Factor (Slope Multiplier)</label>
+            <select id="roofPitchSelect" onchange="updateRoofCalculation()" class="bg-slate-900 text-slate-200 text-xs py-1.5 px-2 rounded-lg border border-slate-800">
+              <option value="1.0">Low / Flat (1.0x)</option>
+              <option value="1.12" selected>Standard 4/12 - 6/12 (1.12x)</option>
+              <option value="1.25">Steep 8/12 - 10/12 (1.25x)</option>
+              <option value="1.40">Very Steep 12/12+ (1.40x)</option>
+            </select>
+          </div>
+
+          <button onclick="injectRoofIntoNotes()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 rounded-xl text-xs mt-2">
+            ➕ Add Measurement to Proposal Notes
+          </button>
         </div>
       </div>
-
     </div>
 
     <!-- TAB 3: HISTORY -->
     <div id="historyTab" class="hidden space-y-4 no-print">
       <div class="bg-slate-900 p-4 rounded-2xl border border-slate-800 space-y-3 shadow-lg">
         <div class="flex items-center justify-between border-b border-slate-800 pb-2">
-          <h2 id="lblHistoryTitle" class="text-xs font-bold text-slate-200 uppercase">Saved Local Estimates</h2>
+          <h2 id="lblHistoryTitle" class="text-xs font-bold text-slate-200 uppercase">Saved Estimates & History</h2>
           <button id="lblRefresh" onclick="fetchHistory()" class="text-xs text-amber-500 underline font-semibold">Refresh</button>
         </div>
-
-        <!-- Live Search Bar -->
-        <div class="relative">
-          <input type="text" id="historySearchInput" onkeyup="filterHistory()" placeholder="🔍 Search name, job #, phone, address..." class="text-xs py-2.5 px-3 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 placeholder-slate-500 w-full focus:border-amber-500">
-        </div>
-
         <div id="historyContainer" class="space-y-2.5">
           <p id="lblNoHistory" class="text-slate-500 italic text-center py-6 text-xs">Click refresh to load history...</p>
         </div>
@@ -375,20 +346,19 @@
   </main>
 
   <footer class="border-t border-slate-900 bg-slate-950 py-3 text-center text-slate-600 text-[11px] no-print">
-    <p>JobSight AI Field OS &bull; Field Operations & Scheduling Engine</p>
+    <p>JobSight AI Field OS &bull; Roofing & Operations Engine</p>
   </footer>
 
   <script>
     const translations = {
       en: {
-        subHeader: "Field Operations & Scheduling Engine",
+        subHeader: "Field Operations & Roofing Engine",
         tabGen: "Gen",
-        tabCal: "Schedule 📅",
+        tabRoof: "Roof 📐",
         tabHist: "History",
         detailsTitle: "Proposal Details & Logo",
         company: "Company Name",
         client: "Client Name",
-        phone: "Client Phone",
         address: "Job Address",
         area: "Job Area / Focus",
         notesTitle: "Walkthrough Notes & Extras",
@@ -399,9 +369,9 @@
         addItem: "+ Item",
         sigTitle: "Client Signature Approval",
         clearSig: "Clear",
-        historyTitle: "Saved Local Estimates",
+        historyTitle: "Saved Estimates & History",
         refresh: "Refresh",
-        noHistory: "No estimates found...",
+        noHistory: "Click refresh to load history...",
         termsTitle: "Terms & Conditions:",
         termsText: "Payment due upon completion. Valid for 30 days.",
         contractorSig: "Contractor Signature",
@@ -413,14 +383,13 @@
         sigPlaceholder: "Sign here with finger or stylus"
       },
       es: {
-        subHeader: "Motor de Operaciones y Agenda",
+        subHeader: "Motor de Operaciones y Techado",
         tabGen: "Gen",
-        tabCal: "Agenda 📅",
+        tabRoof: "Techo 📐",
         tabHist: "Historial",
         detailsTitle: "Detalles de Propuesta y Logo",
         company: "Nombre de la Empresa",
         client: "Nombre del Cliente",
-        phone: "Teléfono del Cliente",
         address: "Dirección del Trabajo",
         area: "Área de Trabajo",
         notesTitle: "Notas de Inspección y Extras",
@@ -431,9 +400,9 @@
         addItem: "+ Ítem",
         sigTitle: "Firma y Aprobación del Cliente",
         clearSig: "Borrar",
-        historyTitle: "Presupuestos Guardados",
+        historyTitle: "Presupuestos Guardados e Historial",
         refresh: "Actualizar",
-        noHistory: "No se encontraron presupuestos...",
+        noHistory: "Haga clic en actualizar...",
         termsTitle: "Términos y Condiciones:",
         termsText: "Pago vencido al finalizar. Válido por 30 días.",
         contractorSig: "Firma del Contratista",
@@ -454,12 +423,11 @@
 
       document.getElementById('subHeader').innerText = t.subHeader;
       document.getElementById('tabGenBtn').innerText = t.tabGen;
-      document.getElementById('tabCalBtn').innerText = t.tabCal;
+      document.getElementById('tabRoofBtn').innerText = t.tabRoof;
       document.getElementById('tabHistBtn').innerText = t.tabHist;
       document.getElementById('lblDetailsTitle').innerText = t.detailsTitle;
       document.getElementById('lblCompany').innerText = t.company;
       document.getElementById('lblClient').innerText = t.client;
-      document.getElementById('lblPhone').innerText = t.phone;
       document.getElementById('lblAddress').innerText = t.address;
       document.getElementById('lblArea').innerText = t.area;
       document.getElementById('lblNotesTitle').innerText = t.notesTitle;
@@ -480,16 +448,12 @@
       if (currentEstimate) renderEstimateUI();
     }
 
-    window.addEventListener('DOMContentLoaded', () => {
-      initSignaturePad();
-      if (customLogoBase64) applyLogoToHeader(customLogoBase64);
-
-      const dateInput = document.getElementById("apptDateInput");
-      if (dateInput) dateInput.value = new Date().toISOString().split('T')[0];
-
-      renderAppointmentsList();
-      fetchHistory();
-    });
+    const SUPABASE_URL = ''; 
+    const SUPABASE_ANON_KEY = ''; 
+    let supabaseClient = null;
+    if (SUPABASE_URL && SUPABASE_URL.startsWith('http')) {
+      try { supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY); } catch (e) {}
+    }
 
     let currentEstimate = null;
     let currentSitePhoto = null;
@@ -497,6 +461,14 @@
     let recognition = null;
     let isRecording = false;
 
+    // Leaflet Map & Roofing Variables
+    let leafletMap = null;
+    let polygonLayer = null;
+    let latLngPoints = [];
+    let markerLayers = [];
+    let rawSquareMeters = 0;
+
+    // Signature Pad Variables
     let canvas, ctx, isDrawing = false, hasSigned = false;
 
     function initSignaturePad() {
@@ -584,6 +556,13 @@
       if (currentEstimate) renderEstimateUI();
     }
 
+    window.addEventListener('DOMContentLoaded', () => {
+      initSignaturePad();
+      if (customLogoBase64) {
+        applyLogoToHeader(customLogoBase64);
+      }
+    });
+
     function handleLogoUpload(event) {
       const file = event.target.files[0];
       if (!file) return;
@@ -616,14 +595,112 @@
       if (currentEstimate) renderEstimateUI();
     }
 
-    function openTurnByTurnDirections() {
+    function initLeafletMap() {
+      if (leafletMap) return;
+      leafletMap = L.map('map').setView([30.2672, -97.7431], 19);
+
+      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        attribution: 'Tiles &copy; Esri',
+        maxZoom: 20
+      }).addTo(leafletMap);
+
+      leafletMap.on('click', (e) => {
+        addRoofPoint(e.latlng);
+      });
+    }
+
+    function geocodeAndCenterMap() {
       const address = document.getElementById("clientAddressInput").value;
-      if (!address) {
-        alert("Please enter a job address first!");
-        return;
+      if (!address) return;
+      
+      fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}`)
+        .then(response => response.json())
+        .then(data => {
+          if (data && data.length > 0) {
+            const lat = parseFloat(data[0].lat);
+            const lon = parseFloat(data[0].lon);
+            if (leafletMap) {
+              leafletMap.setView([lat, lon], 19);
+            }
+          }
+        }).catch(() => {});
+    }
+
+    function addRoofPoint(latlng) {
+      latLngPoints.push(latlng);
+      
+      const marker = L.circleMarker(latlng, {
+        radius: 6,
+        color: '#ffffff',
+        fillColor: '#fbbf24',
+        fillOpacity: 1,
+        weight: 2
+      }).addTo(leafletMap);
+      markerLayers.push(marker);
+
+      if (polygonLayer) {
+        leafletMap.removeLayer(polygonLayer);
       }
-      const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}`;
-      window.open(mapsUrl, '_blank');
+
+      if (latLngPoints.length >= 3) {
+        polygonLayer = L.polygon(latLngPoints, {
+          color: '#fbbf24',
+          weight: 2,
+          fillColor: '#fbbf24',
+          fillOpacity: 0.4
+        }).addTo(leafletMap);
+
+        rawSquareMeters = calculatePolygonArea(latLngPoints);
+        updateRoofCalculation();
+      }
+    }
+
+    function calculatePolygonArea(latlngs) {
+      if (latlngs.length < 3) return 0;
+      let total = 0;
+      const earthRadius = 6378137;
+      for (let i = 0; i < latlngs.length; i++) {
+        const p1 = latlngs[i];
+        const p2 = latlngs[(i + 1) % latLngs.length];
+        const lon1 = p1.lng * Math.PI / 180;
+        const lon2 = p2.lng * Math.PI / 180;
+        const lat1 = p1.lat * Math.PI / 180;
+        const lat2 = p2.lat * Math.PI / 180;
+        total += (lon2 - lon1) * (2 + Math.sin(lat1) + Math.sin(lat2));
+      }
+      total = total * earthRadius * earthRadius / 2.0;
+      return Math.abs(total);
+    }
+
+    function updateRoofCalculation() {
+      const sqFtFromMeters = rawSquareMeters * 10.7639;
+      const pitchMultiplier = parseFloat(document.getElementById("roofPitchSelect").value) || 1.12;
+      const totalSqFt = Math.round(sqFtFromMeters * pitchMultiplier);
+      const squares = (totalSqFt / 100).toFixed(1);
+
+      document.getElementById("roofSqFtDisplay").innerText = `${totalSqFt.toLocaleString()} sq ft (${squares} Squares)`;
+    }
+
+    function resetRoofMeasurement() {
+      latLngPoints = [];
+      if (polygonLayer) leafletMap.removeLayer(polygonLayer);
+      markerLayers.forEach(m => leafletMap.removeLayer(m));
+      markerLayers = [];
+      rawSquareMeters = 0;
+      document.getElementById("roofSqFtDisplay").innerText = "0 sq ft (0 Squares)";
+    }
+
+    function injectRoofIntoNotes() {
+      const pitchMultiplier = parseFloat(document.getElementById("roofPitchSelect").value) || 1.12;
+      const sqFtFromMeters = rawSquareMeters * 10.7639;
+      const totalSqFt = Math.round(sqFtFromMeters * pitchMultiplier);
+      const squares = (totalSqFt / 100).toFixed(1);
+
+      const notes = document.getElementById("notesInput");
+      notes.value = notes.value + (notes.value ? '\n' : '') + `Roof Measurement: ${totalSqFt.toLocaleString()} sq ft (${squares} Squares incl. pitch factor). Tear off and install architectural shingles.`;
+      
+      switchTab('generator');
+      alert("Roof measurement added to proposal notes!");
     }
 
     function handlePhotoUpload(event) {
@@ -692,26 +769,30 @@
 
     function switchTab(tab) {
       const genTab = document.getElementById('generatorTab');
-      const calTab = document.getElementById('calendarTab');
+      const roofTab = document.getElementById('roofTab');
       const histTab = document.getElementById('historyTab');
       const genBtn = document.getElementById('tabGenBtn');
-      const calBtn = document.getElementById('tabCalBtn');
+      const roofBtn = document.getElementById('tabRoofBtn');
       const histBtn = document.getElementById('tabHistBtn');
 
       genTab.classList.add('hidden');
-      calTab.classList.add('hidden');
+      roofTab.classList.add('hidden');
       histTab.classList.add('hidden');
       genBtn.className = "text-slate-400 text-xs font-semibold px-2.5 py-1 rounded-md";
-      calBtn.className = "text-slate-400 text-xs font-semibold px-2.5 py-1 rounded-md";
+      roofBtn.className = "text-slate-400 text-xs font-semibold px-2.5 py-1 rounded-md";
       histBtn.className = "text-slate-400 text-xs font-semibold px-2.5 py-1 rounded-md";
 
       if (tab === 'generator') {
         genTab.classList.remove('hidden');
         genBtn.className = "bg-amber-500 text-slate-950 text-xs font-bold px-2.5 py-1 rounded-md";
-      } else if (tab === 'calendar') {
-        calTab.classList.remove('hidden');
-        calBtn.className = "bg-amber-500 text-slate-950 text-xs font-bold px-2.5 py-1 rounded-md";
-        renderAppointmentsList();
+      } else if (tab === 'roof') {
+        roofTab.classList.remove('hidden');
+        roofBtn.className = "bg-amber-500 text-slate-950 text-xs font-bold px-2.5 py-1 rounded-md";
+        setTimeout(() => {
+          initLeafletMap();
+          leafletMap.invalidateSize();
+          geocodeAndCenterMap();
+        }, 150);
       } else {
         histTab.classList.remove('hidden');
         histBtn.className = "bg-amber-500 text-slate-950 text-xs font-bold px-2.5 py-1 rounded-md";
@@ -719,95 +800,10 @@
       }
     }
 
-    // --- CALENDAR & APPOINTMENTS ENGINE ---
-    function saveAppointment() {
-      const date = document.getElementById("apptDateInput").value;
-      const time = document.getElementById("apptTimeInput").value;
-      const client = document.getElementById("apptClientInput").value;
-      const phone = document.getElementById("apptPhoneInput").value;
-      const address = document.getElementById("apptAddressInput").value;
-      const type = document.getElementById("apptTypeSelect").value;
-
-      if (!date || !client) {
-        alert("Please enter at least an appointment date and client name.");
-        return;
-      }
-
-      const appt = { id: Date.now(), date, time, client, phone, address, type };
-      let appointments = JSON.parse(localStorage.getItem('jobsight_appointments') || '[]');
-      appointments.push(appt);
-      appointments.sort((a, b) => new Date(a.date + ' ' + (a.time || '00:00')) - new Date(b.date + ' ' + (b.time || '00:00')));
-      localStorage.setItem('jobsight_appointments', JSON.stringify(appointments));
-
-      alert("Appointment scheduled!");
-      renderAppointmentsList();
-
-      document.getElementById("apptClientInput").value = '';
-      document.getElementById("apptPhoneInput").value = '';
-      document.getElementById("apptAddressInput").value = '';
-    }
-
-    function renderAppointmentsList() {
-      const container = document.getElementById("appointmentsContainer");
-      const badge = document.getElementById("apptCountBadge");
-      let appointments = JSON.parse(localStorage.getItem('jobsight_appointments') || '[]');
-
-      if (badge) badge.innerText = `${appointments.length} Booked`;
-
-      if (appointments.length === 0) {
-        container.innerHTML = `<p class="text-slate-500 italic text-center py-6 text-xs">No upcoming appointments scheduled yet.</p>`;
-        return;
-      }
-
-      let html = '';
-      appointments.forEach((appt, idx) => {
-        html += `
-          <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2">
-            <div class="flex justify-between items-start gap-2">
-              <div>
-                <span class="bg-amber-500/10 text-amber-400 border border-amber-500/30 text-[9px] px-1.5 py-0.5 rounded font-mono font-bold">${appt.date} ${appt.time ? '@ ' + appt.time : ''}</span>
-                <p class="font-bold text-slate-100 text-xs mt-1">${appt.client} <span class="text-slate-400 font-normal">(${appt.type})</span></p>
-                <p class="text-[10px] text-slate-400">${appt.address || 'No address specified'} ${appt.phone ? '&bull; 📞 ' + appt.phone : ''}</p>
-              </div>
-              <button onclick="deleteAppointment(${idx})" class="text-rose-400 text-xs p-1" title="Delete">🗑️</button>
-            </div>
-            <div class="flex space-x-2 pt-1 border-t border-slate-900">
-              <button onclick="startProposalFromAppt(${idx})" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-2.5 py-1 rounded-lg text-[10px]">➕ Start Proposal</button>
-              ${appt.address ? `<button onclick="window.open('https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(appt.address)}', '_blank')" class="bg-slate-800 hover:bg-slate-700 text-sky-400 font-bold px-2.5 py-1 rounded-lg text-[10px]">🚗 Navigate</button>` : ''}
-            </div>
-          </div>
-        `;
-      });
-
-      container.innerHTML = html;
-    }
-
-    function deleteAppointment(index) {
-      let appointments = JSON.parse(localStorage.getItem('jobsight_appointments') || '[]');
-      appointments.splice(index, 1);
-      localStorage.setItem('jobsight_appointments', JSON.stringify(appointments));
-      renderAppointmentsList();
-    }
-
-    function startProposalFromAppt(index) {
-      let appointments = JSON.parse(localStorage.getItem('jobsight_appointments') || '[]');
-      const appt = appointments[index];
-      if (!appt) return;
-
-      document.getElementById("clientNameInput").value = appt.client || '';
-      document.getElementById("clientPhoneInput").value = appt.phone || '';
-      document.getElementById("clientAddressInput").value = appt.address || '';
-      document.getElementById("notesInput").value = `Scheduled ${appt.type} on ${appt.date}. Walkthrough and scope evaluation.`;
-
-      switchTab('generator');
-      alert("Client details and appointment notes loaded into proposal!");
-    }
-
     function generateEstimate() {
       const input = document.getElementById("notesInput").value;
       const companyName = document.getElementById("companyNameInput").value || "ProBuild Services";
       const clientName = document.getElementById("clientNameInput").value || "Residential Client";
-      const clientPhone = document.getElementById("clientPhoneInput").value || "";
       const clientAddress = document.getElementById("clientAddressInput").value || "123 Maple Street, Austin TX";
       const roomCategory = document.getElementById("roomCategorySelect").value;
 
@@ -852,7 +848,6 @@
         order_number: orderNumber,
         company_name: companyName,
         client_name: clientName,
-        client_phone: clientPhone,
         client_address: clientAddress,
         room_category: roomCategory,
         created_date: formattedDate,
@@ -885,7 +880,7 @@
       currentEstimate.extra_desc = document.getElementById("extraDescInput")?.value || currentEstimate.extra_desc;
 
       const adjustedSubtotal = subtotal + extraCost;
-      const tax = Math.round(adjustedSubtotal * 0.0825 * 100) / 100;
+      const tax = Math.round(adjustedSubtotal * 0.0825 * 100) / 100; // 8.25% Tax
       const grand_total = Math.round((adjustedSubtotal + tax) * 100) / 100;
 
       const amountPaid = parseFloat(document.getElementById("amountPaidInput")?.value) || currentEstimate.amount_paid || 0;
@@ -900,6 +895,7 @@
       const companyNameVal = document.getElementById("companyNameInput")?.value || currentEstimate.company_name;
       currentEstimate.company_name = companyNameVal;
 
+      // HTML snippet for logo display
       const logoHtmlDark = customLogoBase64 
         ? `<img src="${customLogoBase64}" class="w-10 h-10 object-contain rounded-lg border border-amber-500/50 bg-slate-900 p-0.5 shrink-0">` 
         : '';
@@ -907,6 +903,7 @@
         ? `<img src="${customLogoBase64}" style="max-height: 48px; max-width: 120px; object-fit: contain; margin-right: 12px; vertical-align: middle;">` 
         : '';
 
+      // 1. Render Screen App View (Dark Mode)
       let html = `
         <div class="border-b border-slate-800 pb-2.5 mb-3 flex justify-between items-center gap-2">
           <div class="flex items-center space-x-2.5">
@@ -916,7 +913,7 @@
                 <p class="text-amber-400 font-bold text-xs">${currentEstimate.company_name}</p>
                 <span class="bg-amber-500/10 text-amber-400 border border-amber-500/30 text-[9px] px-1.5 py-0.5 rounded font-mono font-bold">${currentEstimate.order_number}</span>
               </div>
-              <p class="text-[11px] text-slate-400 mt-0.5">Client: <strong class="text-slate-200">${currentEstimate.client_name}</strong> ${currentEstimate.client_phone ? '&bull; ' + currentEstimate.client_phone : ''}</p>
+              <p class="text-[11px] text-slate-400 mt-0.5">Client: <strong class="text-slate-200">${currentEstimate.client_name}</strong></p>
             </div>
           </div>
           <div class="text-right shrink-0">
@@ -991,6 +988,7 @@
       container.innerHTML = html;
       document.getElementById("remainingBalanceDisplay").innerText = `$${remainingBalance.toFixed(2)}`;
 
+      // 2. Render Printable PDF Container with Company Logo
       const pdfContainer = document.getElementById("printablePdfArea");
       let pdfHtml = `
         <div style="border-bottom: 2px solid #0f172a; padding-bottom: 12px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
@@ -1002,7 +1000,7 @@
             </div>
           </div>
           <div style="text-align: right;">
-            <p style="font-size: 11px; color: #475569; margin: 0;">Client: <strong>${currentEstimate.client_name}</strong><br>${currentEstimate.client_phone ? currentEstimate.client_phone + '<br>' : ''}${currentEstimate.client_address}</p>
+            <p style="font-size: 11px; color: #475569; margin: 0;">Client: <strong>${currentEstimate.client_name}</strong><br>${currentEstimate.client_address}</p>
           </div>
         </div>
 
@@ -1136,19 +1134,13 @@
       renderEstimateUI();
     }
 
-    // --- LOCAL STORAGE FUNCTIONS ---
-    function saveEstimate() {
+    async function saveEstimate() {
       if (!currentEstimate) return;
-
       const sigImage = (canvas && hasSigned) ? canvas.toDataURL() : null;
-      const record = { 
-        ...currentEstimate, 
-        site_photo: currentSitePhoto, 
-        client_signature: sigImage, 
-        timestamp: Date.now() 
-      };
+      const record = { ...currentEstimate, site_photo: currentSitePhoto, client_signature: sigImage, timestamp: Date.now() };
 
       let localHistory = JSON.parse(localStorage.getItem('jobsight_estimates') || '[]');
+      
       const existingIndex = localHistory.findIndex(e => e.order_number === currentEstimate.order_number);
       if (existingIndex >= 0) {
         localHistory[existingIndex] = record;
@@ -1157,20 +1149,19 @@
       }
 
       localStorage.setItem('jobsight_estimates', JSON.stringify(localHistory));
+
+      if (supabaseClient) {
+        try { await supabaseClient.from('estimates').insert([{ estimate_data: record }]); } catch (e) {}
+      }
+
       alert(currentLang === 'es' ? "¡Guardado con éxito!" : "Estimate saved successfully!");
-      fetchHistory();
     }
 
-    function fetchHistory() {
-      const records = JSON.parse(localStorage.getItem('jobsight_estimates') || '[]');
-      window.localRecordsCache = records;
-      renderHistoryList(records);
-    }
-
-    function renderHistoryList(allRecords) {
+    async function fetchHistory() {
       const container = document.getElementById("historyContainer");
+      let allRecords = JSON.parse(localStorage.getItem('jobsight_estimates') || '[]');
 
-      if (allRecords && allRecords.length > 0) {
+      if (allRecords.length > 0) {
         let html = '';
         allRecords.forEach((est, idx) => {
           html += `<div class="bg-slate-950 p-3 rounded-xl border border-slate-800 flex justify-between items-center gap-2">
@@ -1179,7 +1170,7 @@
                 <p class="font-bold text-amber-400 text-xs">${est.company_name} - ${est.client_name}</p>
                 <span class="bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[9px] px-1 py-0.5 rounded font-mono">${est.order_number || '#JS-0000'}</span>
               </div>
-              <p class="text-[10px] text-slate-400 mt-0.5">${est.client_address || ''} ${est.client_phone ? '&bull; 📞 ' + est.client_phone : ''}</p>
+              <p class="text-[10px] text-slate-400 mt-0.5">${est.client_address}</p>
               <p class="text-[9px] text-amber-500/80 mt-0.5">${est.created_date || ''} ${est.created_time ? '&bull; ' + est.created_time : ''}</p>
             </div>
             <div class="text-right shrink-0 flex items-center space-x-2">
@@ -1187,8 +1178,8 @@
                 <span class="font-extrabold text-emerald-400 text-xs block">$${est.summary?.grand_total || 0}</span>
                 <span class="text-[9px] text-rose-400 block">Bal: $${est.summary?.remaining_balance ?? est.summary?.grand_total ?? 0}</span>
               </div>
-              <button onclick="reopenEstimateCached(${idx})" class="bg-slate-800 hover:bg-slate-700 text-amber-400 text-xs px-2 py-1.5 rounded-lg font-bold" title="Edit & Reopen">✏️</button>
-              <button onclick="deleteLocalEstimate(${idx})" class="bg-rose-950/60 hover:bg-rose-900 text-rose-400 text-xs px-2 py-1.5 rounded-lg" title="Delete">🗑️</button>
+              <button onclick="reopenEstimate(${idx})" class="bg-slate-800 hover:bg-slate-700 text-amber-400 text-xs px-2 py-1.5 rounded-lg font-bold" title="Edit & Reopen">✏️</button>
+              <button onclick="deleteEstimate(${idx})" class="bg-rose-950/60 hover:bg-rose-900 text-rose-400 text-xs px-2 py-1.5 rounded-lg" title="Delete">🗑️</button>
             </div>
           </div>`;
         });
@@ -1198,36 +1189,13 @@
       }
     }
 
-    function filterHistory() {
-      const query = document.getElementById("historySearchInput").value.toLowerCase().trim();
-      const records = window.localRecordsCache || [];
+    function reopenEstimate(index) {
+      let localHistory = JSON.parse(localStorage.getItem('jobsight_estimates') || '[]');
+      if (!localHistory[index]) return;
 
-      if (!query) {
-        renderHistoryList(records);
-        return;
-      }
-
-      const filtered = records.filter(est => {
-        const clientName = (est.client_name || '').toLowerCase();
-        const orderNum = (est.order_number || '').toLowerCase();
-        const phone = (est.client_phone || '').toLowerCase();
-        const address = (est.client_address || '').toLowerCase();
-        const company = (est.company_name || '').toLowerCase();
-
-        return clientName.includes(query) || orderNum.includes(query) || phone.includes(query) || address.includes(query) || company.includes(query);
-      });
-
-      renderHistoryList(filtered);
-    }
-
-    function reopenEstimateCached(index) {
-      const records = window.localRecordsCache || [];
-      if (!records[index]) return;
-
-      currentEstimate = records[index];
+      currentEstimate = localHistory[index];
       document.getElementById('companyNameInput').value = currentEstimate.company_name;
       document.getElementById('clientNameInput').value = currentEstimate.client_name;
-      document.getElementById('clientPhoneInput').value = currentEstimate.client_phone || '';
       document.getElementById('clientAddressInput').value = currentEstimate.client_address;
       document.getElementById('roomCategorySelect').value = currentEstimate.room_category || 'General & Whole House';
       document.getElementById('extraDescInput').value = currentEstimate.extra_desc || '';
@@ -1247,14 +1215,15 @@
       switchTab('generator');
     }
 
-    function deleteLocalEstimate(index) {
-      if (!confirm("Are you sure you want to delete this estimate?")) return;
-      let records = JSON.parse(localStorage.getItem('jobsight_estimates') || '[]');
-      records.splice(index, 1);
-      localStorage.setItem('jobsight_estimates', JSON.stringify(records));
+    function deleteEstimate(index) {
+      if (!confirm("Are you sure you want to delete this saved estimate?")) return;
+      let localHistory = JSON.parse(localStorage.getItem('jobsight_estimates') || '[]');
+      localHistory.splice(index, 1);
+      localStorage.setItem('jobsight_estimates', JSON.stringify(localHistory));
       fetchHistory();
     }
 
+    // Native Browser Vector Print Engine
     function downloadPDF() {
       if (!currentEstimate) return;
       window.print();
