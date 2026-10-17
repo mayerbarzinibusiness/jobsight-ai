@@ -83,8 +83,9 @@
 </head>
 <body class="min-h-screen flex flex-col justify-between">
 
-  <!-- Header -->
-  <header class="sticky top-0 z-40 bg-slate-950/95 backdrop-blur border-b border-slate-800 p-2.5 no-print">
+  <!-- Header: Two-Row Layout -->
+  <header class="sticky top-0 z-40 bg-slate-950/95 backdrop-blur border-b border-slate-800 p-2.5 space-y-2 no-print">
+    <!-- Row 1: Logo, Title/Subtitle, and Language Selector -->
     <div class="max-w-3xl mx-auto flex items-center justify-between gap-2">
       <div class="flex items-center space-x-2 min-w-0">
         <div id="headerLogoWrapper" class="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center shrink-0 overflow-hidden">
@@ -96,31 +97,33 @@
         </div>
       </div>
 
-      <div class="flex items-center space-x-1.5 shrink-0">
-        <select id="langSelect" onchange="switchLanguage(this.value)" class="!w-auto bg-slate-900 text-amber-400 text-xs font-bold px-2 py-1 rounded-lg">
+      <div class="shrink-0">
+        <select id="langSelect" onchange="switchLanguage(this.value)" class="!w-auto bg-slate-900 text-amber-400 text-xs font-bold px-2.5 py-1.5 rounded-lg border border-slate-800">
           <option value="en">🇺🇸 EN</option>
           <option value="es">🇪🇸 ES</option>
         </select>
-        
-        <!-- Two-Line Stacked Tab Navigation -->
-        <div class="flex bg-slate-900 p-1 rounded-lg border border-slate-800 gap-0.5">
-          <button onclick="switchTab('generator')" id="tabGenBtn" class="bg-amber-500 text-slate-950 text-[10px] font-bold px-2 py-1 rounded-md flex flex-col items-center justify-center leading-none">
-            <span class="text-xs">📄</span>
-            <span class="mt-0.5">Gen</span>
-          </button>
-          <button onclick="switchTab('completion')" id="tabCompBtn" class="text-slate-400 text-[10px] font-semibold px-2 py-1 rounded-md flex flex-col items-center justify-center leading-none">
-            <span class="text-xs">✍️</span>
-            <span class="mt-0.5">Sign</span>
-          </button>
-          <button onclick="switchTab('calendar')" id="tabCalBtn" class="text-slate-400 text-[10px] font-semibold px-2 py-1 rounded-md flex flex-col items-center justify-center leading-none">
-            <span class="text-xs">📅</span>
-            <span class="mt-0.5">Calendar</span>
-          </button>
-          <button onclick="switchTab('history')" id="tabHistBtn" class="text-slate-400 text-[10px] font-semibold px-2 py-1 rounded-md flex flex-col items-center justify-center leading-none">
-            <span class="text-xs">📂</span>
-            <span class="mt-0.5">History</span>
-          </button>
-        </div>
+      </div>
+    </div>
+
+    <!-- Row 2: Navigation Tabs Bar -->
+    <div class="max-w-3xl mx-auto">
+      <div class="grid grid-cols-4 bg-slate-900 p-1 rounded-xl border border-slate-800 gap-1">
+        <button onclick="switchTab('generator')" id="tabGenBtn" class="bg-amber-500 text-slate-950 text-xs font-bold py-1.5 px-1 rounded-lg flex items-center justify-center space-x-1">
+          <span>📄</span>
+          <span id="lblTabContract">Contract</span>
+        </button>
+        <button onclick="switchTab('completion')" id="tabCompBtn" class="text-slate-400 text-xs font-semibold py-1.5 px-1 rounded-lg flex items-center justify-center space-x-1">
+          <span>✍️</span>
+          <span id="lblTabCompletion">Completion</span>
+        </button>
+        <button onclick="switchTab('calendar')" id="tabCalBtn" class="text-slate-400 text-xs font-semibold py-1.5 px-1 rounded-lg flex items-center justify-center space-x-1">
+          <span>📅</span>
+          <span id="lblTabCalendar">Calendar</span>
+        </button>
+        <button onclick="switchTab('history')" id="tabHistBtn" class="text-slate-400 text-xs font-semibold py-1.5 px-1 rounded-lg flex items-center justify-center space-x-1">
+          <span>📂</span>
+          <span id="lblTabHistory">History</span>
+        </button>
       </div>
     </div>
   </header>
@@ -128,7 +131,7 @@
   <!-- Main Container -->
   <main class="flex-1 max-w-3xl w-full mx-auto p-3 space-y-4">
 
-    <!-- TAB 1: GENERATOR -->
+    <!-- TAB 1: GENERATOR (CONTRACT) -->
     <div id="generatorTab" class="space-y-4">
       
       <!-- Section 1 -->
@@ -447,6 +450,10 @@
     const translations = {
       en: {
         subHeader: "Field Operations & Scheduling Engine",
+        tabContract: "Contract",
+        tabCompletion: "Completion",
+        tabCalendar: "Calendar",
+        tabHistory: "History",
         detailsTitle: "Proposal Details & Logo",
         company: "Company Name",
         client: "Client Name",
@@ -476,6 +483,10 @@
       },
       es: {
         subHeader: "Motor de Operaciones y Agenda",
+        tabContract: "Contrato",
+        tabCompletion: "Terminación",
+        tabCalendar: "Calendario",
+        tabHistory: "Historial",
         detailsTitle: "Detalles de Propuesta y Logo",
         company: "Nombre de la Empresa",
         client: "Nombre del Cliente",
@@ -512,6 +523,10 @@
       const t = translations[lang];
 
       document.getElementById('subHeader').innerText = t.subHeader;
+      document.getElementById('lblTabContract').innerText = t.tabContract;
+      document.getElementById('lblTabCompletion').innerText = t.tabCompletion;
+      document.getElementById('lblTabCalendar').innerText = t.tabCalendar;
+      document.getElementById('lblTabHistory').innerText = t.tabHistory;
       document.getElementById('lblDetailsTitle').innerText = t.detailsTitle;
       document.getElementById('lblCompany').innerText = t.company;
       document.getElementById('lblClient').innerText = t.client;
@@ -904,26 +919,26 @@
       compTab.classList.add('hidden');
       calTab.classList.add('hidden');
       histTab.classList.add('hidden');
-      genBtn.className = "text-slate-400 text-[10px] font-semibold px-2 py-1 rounded-md flex flex-col items-center justify-center leading-none";
-      compBtn.className = "text-slate-400 text-[10px] font-semibold px-2 py-1 rounded-md flex flex-col items-center justify-center leading-none";
-      calBtn.className = "text-slate-400 text-[10px] font-semibold px-2 py-1 rounded-md flex flex-col items-center justify-center leading-none";
-      histBtn.className = "text-slate-400 text-[10px] font-semibold px-2 py-1 rounded-md flex flex-col items-center justify-center leading-none";
+      genBtn.className = "text-slate-400 text-xs font-semibold py-1.5 px-1 rounded-lg flex items-center justify-center space-x-1";
+      compBtn.className = "text-slate-400 text-xs font-semibold py-1.5 px-1 rounded-lg flex items-center justify-center space-x-1";
+      calBtn.className = "text-slate-400 text-xs font-semibold py-1.5 px-1 rounded-lg flex items-center justify-center space-x-1";
+      histBtn.className = "text-slate-400 text-xs font-semibold py-1.5 px-1 rounded-lg flex items-center justify-center space-x-1";
 
       if (tab === 'generator') {
         genTab.classList.remove('hidden');
-        genBtn.className = "bg-amber-500 text-slate-950 text-[10px] font-bold px-2 py-1 rounded-md flex flex-col items-center justify-center leading-none";
+        genBtn.className = "bg-amber-500 text-slate-950 text-xs font-bold py-1.5 px-1 rounded-lg flex items-center justify-center space-x-1";
       } else if (tab === 'completion') {
         compTab.classList.remove('hidden');
-        compBtn.className = "bg-amber-500 text-slate-950 text-[10px] font-bold px-2 py-1 rounded-md flex flex-col items-center justify-center leading-none";
+        compBtn.className = "bg-amber-500 text-slate-950 text-xs font-bold py-1.5 px-1 rounded-lg flex items-center justify-center space-x-1";
         populateCompletionDropdown();
         setTimeout(resizeAllCanvases, 50);
       } else if (tab === 'calendar') {
         calTab.classList.remove('hidden');
-        calBtn.className = "bg-amber-500 text-slate-950 text-[10px] font-bold px-2 py-1 rounded-md flex flex-col items-center justify-center leading-none";
+        calBtn.className = "bg-amber-500 text-slate-950 text-xs font-bold py-1.5 px-1 rounded-lg flex items-center justify-center space-x-1";
         fetchAppointments();
       } else {
         histTab.classList.remove('hidden');
-        histBtn.className = "bg-amber-500 text-slate-950 text-[10px] font-bold px-2 py-1 rounded-md flex flex-col items-center justify-center leading-none";
+        histBtn.className = "bg-amber-500 text-slate-950 text-xs font-bold py-1.5 px-1 rounded-lg flex items-center justify-center space-x-1";
         fetchHistory();
       }
     }
