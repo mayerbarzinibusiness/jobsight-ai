@@ -84,28 +84,42 @@
 <body class="min-h-screen flex flex-col justify-between">
 
   <!-- Header -->
-  <header class="sticky top-0 z-40 bg-slate-950/95 backdrop-blur border-b border-slate-800 p-3 no-print">
+  <header class="sticky top-0 z-40 bg-slate-950/95 backdrop-blur border-b border-slate-800 p-2.5 no-print">
     <div class="max-w-3xl mx-auto flex items-center justify-between gap-2">
       <div class="flex items-center space-x-2 min-w-0">
-        <div id="headerLogoWrapper" class="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center shrink-0 overflow-hidden">
-          <span id="headerLogoIcon" class="text-lg">🛠️</span>
+        <div id="headerLogoWrapper" class="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center shrink-0 overflow-hidden">
+          <span id="headerLogoIcon" class="text-base">🛠️</span>
         </div>
         <div class="truncate">
-          <h1 class="text-base font-bold text-amber-500 leading-tight">JobSight AI</h1>
-          <p id="subHeader" class="text-[11px] text-slate-400 truncate">Field Operations & Scheduling Engine</p>
+          <h1 class="text-sm font-bold text-amber-500 leading-tight">JobSight AI</h1>
+          <p id="subHeader" class="text-[10px] text-slate-400 truncate">Field Operations & Scheduling Engine</p>
         </div>
       </div>
 
       <div class="flex items-center space-x-1.5 shrink-0">
-        <select id="langSelect" onchange="switchLanguage(this.value)" class="!w-auto bg-slate-900 text-amber-400 text-xs font-bold px-2 py-1.5 rounded-lg">
+        <select id="langSelect" onchange="switchLanguage(this.value)" class="!w-auto bg-slate-900 text-amber-400 text-xs font-bold px-2 py-1 rounded-lg">
           <option value="en">🇺🇸 EN</option>
           <option value="es">🇪🇸 ES</option>
         </select>
-        <div class="flex bg-slate-900 p-1 rounded-lg border border-slate-800 overflow-x-auto">
-          <button onclick="switchTab('generator')" id="tabGenBtn" class="bg-amber-500 text-slate-950 text-xs font-bold px-2.5 py-1 rounded-md">Gen</button>
-          <button onclick="switchTab('completion')" id="tabCompBtn" class="text-slate-400 text-xs font-semibold px-2.5 py-1 rounded-md">Sign ✍️</button>
-          <button onclick="switchTab('calendar')" id="tabCalBtn" class="text-slate-400 text-xs font-semibold px-2.5 py-1 rounded-md">Cal 📅</button>
-          <button onclick="switchTab('history')" id="tabHistBtn" class="text-slate-400 text-xs font-semibold px-2.5 py-1 rounded-md">History</button>
+        
+        <!-- Two-Line Stacked Tab Navigation -->
+        <div class="flex bg-slate-900 p-1 rounded-lg border border-slate-800 gap-0.5">
+          <button onclick="switchTab('generator')" id="tabGenBtn" class="bg-amber-500 text-slate-950 text-[10px] font-bold px-2 py-1 rounded-md flex flex-col items-center justify-center leading-none">
+            <span class="text-xs">📄</span>
+            <span class="mt-0.5">Gen</span>
+          </button>
+          <button onclick="switchTab('completion')" id="tabCompBtn" class="text-slate-400 text-[10px] font-semibold px-2 py-1 rounded-md flex flex-col items-center justify-center leading-none">
+            <span class="text-xs">✍️</span>
+            <span class="mt-0.5">Sign</span>
+          </button>
+          <button onclick="switchTab('calendar')" id="tabCalBtn" class="text-slate-400 text-[10px] font-semibold px-2 py-1 rounded-md flex flex-col items-center justify-center leading-none">
+            <span class="text-xs">📅</span>
+            <span class="mt-0.5">Calendar</span>
+          </button>
+          <button onclick="switchTab('history')" id="tabHistBtn" class="text-slate-400 text-[10px] font-semibold px-2 py-1 rounded-md flex flex-col items-center justify-center leading-none">
+            <span class="text-xs">📂</span>
+            <span class="mt-0.5">History</span>
+          </button>
         </div>
       </div>
     </div>
@@ -433,10 +447,6 @@
     const translations = {
       en: {
         subHeader: "Field Operations & Scheduling Engine",
-        tabGen: "Gen",
-        tabComp: "Sign ✍️",
-        tabCal: "Cal 📅",
-        tabHist: "History",
         detailsTitle: "Proposal Details & Logo",
         company: "Company Name",
         client: "Client Name",
@@ -466,10 +476,6 @@
       },
       es: {
         subHeader: "Motor de Operaciones y Agenda",
-        tabGen: "Gen",
-        tabComp: "Firmar ✍️",
-        tabCal: "Cal 📅",
-        tabHist: "Historial",
         detailsTitle: "Detalles de Propuesta y Logo",
         company: "Nombre de la Empresa",
         client: "Nombre del Cliente",
@@ -506,10 +512,6 @@
       const t = translations[lang];
 
       document.getElementById('subHeader').innerText = t.subHeader;
-      document.getElementById('tabGenBtn').innerText = t.tabGen;
-      document.getElementById('tabCompBtn').innerText = t.tabComp;
-      document.getElementById('tabCalBtn').innerText = t.tabCal;
-      document.getElementById('tabHistBtn').innerText = t.tabHist;
       document.getElementById('lblDetailsTitle').innerText = t.detailsTitle;
       document.getElementById('lblCompany').innerText = t.company;
       document.getElementById('lblClient').innerText = t.client;
@@ -546,14 +548,12 @@
     let compCanvas, compCtx, compIsDrawing = false, compHasSigned = false;
 
     function initSignaturePads() {
-      // Generator Signature Pad
       canvas = document.getElementById('sigCanvas');
       if (canvas) {
         ctx = canvas.getContext('2d');
         setupCanvasListeners(canvas, ctx, 'gen');
       }
 
-      // Completion Tab Signature Pad
       compCanvas = document.getElementById('compSigCanvas');
       if (compCanvas) {
         compCtx = compCanvas.getContext('2d');
@@ -718,7 +718,6 @@
       completions.unshift(completionRecord);
       localStorage.setItem('jobsight_completions', JSON.stringify(completions));
 
-      // Also flag the corresponding estimate as completed in history
       let localHistory = JSON.parse(localStorage.getItem('jobsight_estimates') || '[]');
       localHistory = localHistory.map(est => {
         if (est.order_number === order) {
@@ -761,7 +760,7 @@
       customLogoBase64 = null;
       localStorage.removeItem('jobsight_logo');
       const wrapper = document.getElementById('headerLogoWrapper');
-      wrapper.innerHTML = `<span id="headerLogoIcon" class="text-lg">🛠️</span>`;
+      wrapper.innerHTML = `<span id="headerLogoIcon" class="text-base">🛠️</span>`;
       document.getElementById('logoPreviewWrapper').classList.remove('flex');
       document.getElementById('logoPreviewWrapper').classList.add('hidden');
       document.getElementById('logoInput').value = '';
@@ -905,26 +904,26 @@
       compTab.classList.add('hidden');
       calTab.classList.add('hidden');
       histTab.classList.add('hidden');
-      genBtn.className = "text-slate-400 text-xs font-semibold px-2.5 py-1 rounded-md";
-      compBtn.className = "text-slate-400 text-xs font-semibold px-2.5 py-1 rounded-md";
-      calBtn.className = "text-slate-400 text-xs font-semibold px-2.5 py-1 rounded-md";
-      histBtn.className = "text-slate-400 text-xs font-semibold px-2.5 py-1 rounded-md";
+      genBtn.className = "text-slate-400 text-[10px] font-semibold px-2 py-1 rounded-md flex flex-col items-center justify-center leading-none";
+      compBtn.className = "text-slate-400 text-[10px] font-semibold px-2 py-1 rounded-md flex flex-col items-center justify-center leading-none";
+      calBtn.className = "text-slate-400 text-[10px] font-semibold px-2 py-1 rounded-md flex flex-col items-center justify-center leading-none";
+      histBtn.className = "text-slate-400 text-[10px] font-semibold px-2 py-1 rounded-md flex flex-col items-center justify-center leading-none";
 
       if (tab === 'generator') {
         genTab.classList.remove('hidden');
-        genBtn.className = "bg-amber-500 text-slate-950 text-xs font-bold px-2.5 py-1 rounded-md";
+        genBtn.className = "bg-amber-500 text-slate-950 text-[10px] font-bold px-2 py-1 rounded-md flex flex-col items-center justify-center leading-none";
       } else if (tab === 'completion') {
         compTab.classList.remove('hidden');
-        compBtn.className = "bg-amber-500 text-slate-950 text-xs font-bold px-2.5 py-1 rounded-md";
+        compBtn.className = "bg-amber-500 text-slate-950 text-[10px] font-bold px-2 py-1 rounded-md flex flex-col items-center justify-center leading-none";
         populateCompletionDropdown();
         setTimeout(resizeAllCanvases, 50);
       } else if (tab === 'calendar') {
         calTab.classList.remove('hidden');
-        calBtn.className = "bg-amber-500 text-slate-950 text-xs font-bold px-2.5 py-1 rounded-md";
+        calBtn.className = "bg-amber-500 text-slate-950 text-[10px] font-bold px-2 py-1 rounded-md flex flex-col items-center justify-center leading-none";
         fetchAppointments();
       } else {
         histTab.classList.remove('hidden');
-        histBtn.className = "bg-amber-500 text-slate-950 text-xs font-bold px-2.5 py-1 rounded-md";
+        histBtn.className = "bg-amber-500 text-slate-950 text-[10px] font-bold px-2 py-1 rounded-md flex flex-col items-center justify-center leading-none";
         fetchHistory();
       }
     }
