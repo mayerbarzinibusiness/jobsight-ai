@@ -718,10 +718,22 @@
       completions.unshift(completionRecord);
       localStorage.setItem('jobsight_completions', JSON.stringify(completions));
 
+      // Also flag the corresponding estimate as completed in history
+      let localHistory = JSON.parse(localStorage.getItem('jobsight_estimates') || '[]');
+      localHistory = localHistory.map(est => {
+        if (est.order_number === order) {
+          est.is_completed = true;
+          est.completed_date = completionRecord.completed_date;
+        }
+        return est;
+      });
+      localStorage.setItem('jobsight_estimates', JSON.stringify(localHistory));
+
       alert("Job completion certificate saved successfully!");
       document.getElementById('compClientInput').value = '';
       document.getElementById('compOrderInput').value = '';
       clearCompletionSignature();
+      fetchHistory();
     }
 
     function handleLogoUpload(event) {
@@ -978,7 +990,8 @@
         payment_method: document.getElementById("paymentMethodSelect")?.value || "Credit Card",
         amount_paid: parseFloat(document.getElementById("amountPaidInput")?.value) || 0,
         payment_status: "Pending",
-        summary: { subtotal, grand_total: subtotal }
+        summary: { subtotal, grand_total: subtotal },
+        is_completed: false
       };
 
       renderEstimateUI();
@@ -1259,6 +1272,7 @@
       
       const existingIndex = localHistory.findIndex(e => e.order_number === currentEstimate.order_number);
       if (existingIndex >= 0) {
+        record.is_completed = localHistory[existingIndex].is_completed || false;
         localHistory[existingIndex] = record;
       } else {
         localHistory.unshift(record);
@@ -1280,12 +1294,17 @@
       if (allRecords.length > 0) {
         let html = '';
         allRecords.forEach((est, idx) => {
+          const completedBadge = est.is_completed 
+            ? `<span class="bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-[9px] px-1.5 py-0.5 rounded font-bold uppercase ml-1">✅ Complete</span>` 
+            : '';
+
           html += `
             <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 flex justify-between items-center gap-2">
               <div class="flex-1 min-w-0">
                 <div class="flex items-center space-x-1.5 flex-wrap">
                   <p class="font-bold text-amber-400 text-xs">${est.company_name} - ${est.client_name}</p>
                   <span class="bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[9px] px-1 py-0.5 rounded font-mono">${est.order_number || '#JS-0000'}</span>
+                  ${completedBadge}
                 </div>
                 <p class="text-[10px] text-slate-400 mt-0.5">${est.client_address || ''} ${est.client_phone ? '&bull; 📞 ' + est.client_phone : ''}</p>
                 <p class="text-[9px] text-amber-500/80 mt-0.5">${est.created_date || ''} ${est.created_time ? '&bull; ' + est.created_time : ''}</p>
