@@ -198,16 +198,12 @@
             <span class="text-amber-500 font-mono text-xs font-bold">02.</span>
             <h2 id="lblNotesTitle" class="text-xs font-bold text-slate-200 uppercase tracking-wide">Walkthrough Notes & Extras</h2>
           </div>
-          <div class="flex space-x-1.5">
+          <div>
             <label class="bg-slate-800 text-amber-400 text-xs font-bold px-2.5 py-1.5 rounded-lg cursor-pointer flex items-center space-x-1">
               <span>📷</span>
               <span id="lblAddPhoto">Photo</span>
               <input type="file" id="cameraInput" accept="image/*" capture="environment" onchange="handlePhotoUpload(event)" class="hidden">
             </label>
-            <button id="micBtn" onclick="toggleVoiceRecording()" class="bg-slate-800 text-slate-300 text-xs font-bold px-2.5 py-1.5 rounded-lg flex items-center space-x-1">
-              <span>🎙️</span>
-              <span id="lblVoice">Voice</span>
-            </button>
           </div>
         </div>
 
@@ -216,7 +212,7 @@
           <button onclick="removePhoto()" class="absolute -top-2 -right-2 bg-rose-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold">✕</button>
         </div>
         
-        <textarea id="notesInput" rows="3" placeholder="Type or dictate notes...&#10;Ex: Demo old cabinets, install 100 sq ft tile."></textarea>
+        <textarea id="notesInput" rows="3" placeholder="Type notes...&#10;Ex: Demo old cabinets, install 100 sq ft tile."></textarea>
 
         <!-- Unforeseen / Extras Section -->
         <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2">
@@ -462,7 +458,6 @@
         area: "Job Area / Focus",
         notesTitle: "Walkthrough Notes & Extras",
         addPhoto: "Photo",
-        voice: "Voice",
         generate: "Generate Instant Estimate",
         proposalTitle: "Itemized Proposal & Payment",
         addItem: "+ Item",
@@ -495,7 +490,6 @@
         area: "Área de Trabajo",
         notesTitle: "Notas de Inspección y Extras",
         addPhoto: "Foto",
-        voice: "Voz",
         generate: "Generar Presupuesto",
         proposalTitle: "Propuesta Detallada y Pago",
         addItem: "+ Ítem",
@@ -535,7 +529,6 @@
       document.getElementById('lblArea').innerText = t.area;
       document.getElementById('lblNotesTitle').innerText = t.notesTitle;
       document.getElementById('lblAddPhoto').innerText = t.addPhoto;
-      document.getElementById('lblVoice').innerText = t.voice;
       document.getElementById('btnGenerate').innerText = t.generate;
       document.getElementById('lblProposalTitle').innerText = t.proposalTitle;
       document.getElementById('btnAddItem').innerText = t.addItem;
@@ -554,8 +547,6 @@
     let currentEstimate = null;
     let currentSitePhoto = null;
     let customLogoBase64 = localStorage.getItem('jobsight_logo') || null;
-    let recognition = null;
-    let isRecording = false;
 
     // Signature Pad Variables (Generator)
     let canvas, ctx, isDrawing = false, hasSigned = false;
@@ -859,50 +850,6 @@
       document.getElementById("cameraInput").value = "";
       document.getElementById("photoPreviewWrapper").classList.add("hidden");
       if (currentEstimate) renderEstimateUI();
-    }
-
-    function toggleVoiceRecording() {
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      if (!SpeechRecognition) { alert("Speech recognition not supported."); return; }
-      const micBtn = document.getElementById("micBtn");
-      const notesInput = document.getElementById("notesInput");
-
-      if (!isRecording) {
-        recognition = new SpeechRecognition();
-        recognition.continuous = true;
-        recognition.interimResults = true;
-        recognition.lang = currentLang === 'es' ? 'es-ES' : 'en-US';
-
-        recognition.onstart = () => {
-          isRecording = true;
-          micBtn.className = "bg-rose-600 animate-pulse text-white text-xs font-bold px-2.5 py-1.5 rounded-lg";
-          micBtn.innerHTML = "<span>🔴</span> <span>Rec...</span>";
-        };
-        recognition.onresult = (event) => {
-          let transcript = '';
-          for (let i = event.resultIndex; i < event.results.length; ++i) {
-            transcript += event.results[i][0].transcript;
-          }
-          if (transcript.trim()) {
-            notesInput.value = notesInput.value + (notesInput.value ? ' ' : '') + transcript;
-          }
-        };
-        recognition.onerror = () => { stopVoiceRecording(); };
-        recognition.onend = () => { stopVoiceRecording(); };
-        try { recognition.start(); } catch (err) { stopVoiceRecording(); }
-      } else {
-        if (recognition) recognition.stop();
-        stopVoiceRecording();
-      }
-    }
-
-    function stopVoiceRecording() {
-      isRecording = false;
-      const micBtn = document.getElementById("micBtn");
-      if (micBtn) {
-        micBtn.className = "bg-slate-800 text-slate-300 text-xs font-bold px-2.5 py-1.5 rounded-lg flex items-center space-x-1";
-        micBtn.innerHTML = `<span>🎙️</span> <span id="lblVoice">${translations[currentLang].voice}</span>`;
-      }
     }
 
     function switchTab(tab) {
